@@ -177,7 +177,7 @@ export async function importRadioCandidates(uuids: string[]): Promise<ActionResu
     if (!(await rateLimit(`radio-import-save:${staff.id}`, 5, 60))) {
       return { ok: false, message: 'Hiciste muchas importaciones seguidas. Esperá un minuto.' };
     }
-    const selected = [...new Set(uuids)].slice(0, 15);
+    const selected = [...new Set(uuids)].slice(0, 5);
     if (!selected.length || selected.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) {
       return { ok: false, message: 'La selección no es válida.' };
     }
