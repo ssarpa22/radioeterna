@@ -29,7 +29,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
   };
 
   const toggle = (uuid: string) => {
-    setSelected((current) => current.includes(uuid) ? current.filter((id) => id !== uuid) : current.length < 15 ? [...current, uuid] : current);
+    setSelected((current) => current.includes(uuid) ? current.filter((id) => id !== uuid) : current.length < 5 ? [...current, uuid] : current);
   };
 
   const importSelected = () => {
@@ -72,9 +72,9 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
       {results.length > 0 && (
         <section className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 className="text-xl">Emisoras encontradas</h2><p className="text-sm text-ink/65">Seleccioná hasta 15 por importación.</p></div>
+            <div><h2 className="text-xl">Emisoras encontradas</h2><p className="text-sm text-ink/65">Seleccioná hasta 5 por importación.</p></div>
             <button type="button" onClick={importSelected} disabled={pending || selected.length === 0} className="btn btn-primary">
-              {pending ? 'Procesando…' : `Importar seleccionadas (${selected.length}/15)`}
+              {pending ? 'Procesando…' : `Importar seleccionadas (${selected.length}/5)`}
             </button>
           </div>
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
