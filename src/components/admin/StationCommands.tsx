@@ -7,8 +7,8 @@ import { VerifyResultView } from './VerifyResultView';
 
 type Btn = { cmd: StationCommand; label: string; confirm?: string; kind?: string; disabled?: boolean; title?: string };
 
-export function StationCommands({ id, status, featured, verification, deleted, isAdmin }:
-  { id: string; status: string; featured: boolean; verification: string; deleted: boolean; isAdmin: boolean }) {
+export function StationCommands({ id, status, featured, verification, deleted, isAdmin, websiteUrl }:
+  { id: string; status: string; featured: boolean; verification: string; deleted: boolean; isAdmin: boolean; websiteUrl: string | null }) {
   const [pending, start] = useTransition(); const [res, setRes] = useState<CommandResult | null>(null); const router = useRouter();
   const run = (cmd: StationCommand, confirmText?: string) => {
     if (confirmText && !window.confirm(confirmText)) return;
@@ -23,6 +23,7 @@ export function StationCommands({ id, status, featured, verification, deleted, i
       <div className="flex flex-wrap gap-2">
         {deleted ? btn({ cmd: 'restore', label: 'Restaurar' }) : <>
           {btn({ cmd: 'verify', label: pending ? 'Trabajando…' : 'Verificar enlace', kind: 'btn-dark' })}
+          {websiteUrl && btn({ cmd: 'verify_website', label: pending ? 'Comprobando…' : 'Verificar sitio web', kind: 'btn-ghost' })}
           {btn({ cmd: 'verify_manual', label: 'Marcar verificada a mano', confirm: '¿Confirmas que escuchaste esta radio y el enlace funciona? Esto permite publicarla.' })}
           {status !== 'published' && btn({ cmd: 'publish', label: 'Publicar', kind: 'btn-primary', disabled: !canPublish, title: canPublish ? undefined : 'Primero verifica el enlace', confirm: '¿Publicar esta radio en el directorio público?' })}
           {status === 'published' && btn({ cmd: 'unpublish', label: 'Despublicar', confirm: 'La radio dejará de verse en el sitio. ¿Continuar?' })}
