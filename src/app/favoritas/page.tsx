@@ -7,12 +7,16 @@ import { StationLogo } from '@/components/StationLogo';
 import { EmptyState, PageHeader } from '@/components/ui';
 
 export default function FavoritesPage() {
-  const { list } = useFavorites();
+  const { list, isHydrated } = useFavorites();
   return (
     <>
       <PageHeader title="Tus radios favoritas" intro="Se guardan solo en este navegador." />
       <div className="wrap py-8">
-        {list.length === 0 ? <EmptyState title="Todavía no tienes favoritas" action={<Link href="/radios" className="btn btn-primary">Explorar radios</Link>}>Toca el corazón en cualquier radio para guardarla aquí.</EmptyState> : (
+        {!isHydrated ? (
+          <p role="status" aria-live="polite" className="text-sm text-ink/70">Cargando tus radios favoritas…</p>
+        ) : list.length === 0 ? (
+          <EmptyState title="Todavía no tienes favoritas" action={<Link href="/radios" className="btn btn-primary">Explorar radios</Link>}>Toca el corazón en cualquier radio para guardarla aquí.</EmptyState>
+        ) : (
           <ul className="grid gap-3">{list.map((s) => (
             <li key={s.id} className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4">
               <StationLogo name={s.name} src={s.logo_url} />
