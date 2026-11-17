@@ -18,7 +18,8 @@ const STATION_DETAIL_BASE_COLUMNS =
 
 function isMissingWebsiteSecurityColumn(error: { code?: string; message?: string }): boolean {
   if (error.code === '42703' || error.code === 'PGRST204') return true;
-  return /website_is_secure/i.test(error.message) && /(column|schema cache|does not exist|could not find)/i.test(error.message);
+  const message = error.message ?? '';
+  return /website_is_secure/i.test(message) && /(column|schema cache|does not exist|could not find)/i.test(message);
 }
 
 export async function getStationBySlug(slug: string) {
