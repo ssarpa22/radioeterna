@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, VERIFICATION_LABEL } from '@/lib/labels';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
+import { PlayButton } from '@/components/player/PlayButton';
 
 export const metadata: Metadata = { title: 'Radios' };
 const SIZE = 25; type SP = Promise<{ q?: string; estado?: string; orden?: string; pagina?: string }>;
@@ -13,7 +14,7 @@ export default async function AdminStations({ searchParams }: { searchParams: SP
   await requireStaff(); const sp = await searchParams; const supabase = await createClient();
   const page = Math.max(1, parseInt(sp.pagina ?? '1', 10) || 1); const q = (sp.q ?? '').trim().slice(0, 80);
   const estado = Object.keys(STATUS_LABEL).includes(sp.estado ?? '') ? sp.estado : undefined;
-  let query = supabase.from('stations').select('id, name, status, verification_status, is_featured, is_demo, last_verified_at, country:countries(name), category:categories!primary_category_id(name)', { count: 'exact' }).is('deleted_at', null);
+  let query = supabase.from('stations').select('id, name, slug, stream_url, stream_format, logo_url, status, verification_status, is_featured, is_demo, last_verified_at, country:countries(name), category:categories!primary_category_id(name)', { count: 'exact' }).is('deleted_at', null);
   if (q) query = query.ilike('name', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
   if (estado) query = query.eq('status', estado);
   query = sp.orden === 'recientes' ? query.order('created_at', { ascending: false }) : query.order('name');
@@ -33,11 +34,24 @@ export default async function AdminStations({ searchParams }: { searchParams: SP
         </div>
         {error && <p role="alert" className="mb-4 text-danger">No se pudo cargar la lista.</p>}
         {(data ?? []).length === 0 ? <EmptyState title="No hay radios con estos filtros" action={<Link href="/admin/radios/nueva" className="btn btn-primary">Crear una radio</Link>} /> :
-          <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{(data ?? []).map((s) => (
-            <li key={s.id}><Link href={`/admin/radios/${s.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-gold-soft/40">
-              <span><span className="font-semibold">{s.name}</span>{s.is_demo && <span className="badge ml-2">DEMO</span>}{s.is_featured && <span className="badge ml-2">Destacada</span>}
-                <span className="block text-sm text-ink/70">{(s.country as unknown as { name: string } | null)?.name} · {(s.category as unknown as { name: string } | null)?.name}</span></span>
-              <span className="flex gap-2 text-sm"><span className="badge">{STATUS_LABEL[s.status]}</span><span className="badge">{VERIFICATION_LABEL[s.verification_status]}</span></span></Link></li>))}</ul>}
+          <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{(data ?? []).map((s) => {
+            const countryName = (s.country as unknown as { name: string } | null)?.name;
+            return (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-gold-soft/40">
+                <Link href={`/admin/radios/${s.id}`} className="min-w-0 flex-1">
+                  <span className="font-semibold">{s.name}</span>{s.is_demo && <span className="badge ml-2">DEMO</span>}{s.is_featured && <span className="badge ml-2">Destacada</span>}
+                  <span className="block text-sm text-ink/70">{countryName} · {(s.category as unknown as { name: string } | null)?.name}</span>
+                  <span className="mt-1 flex flex-wrap gap-2 text-sm"><span className="badge">{STATUS_LABEL[s.status]}</span><span className="badge">{VERIFICATION_LABEL[s.verification_status]}</span></span>
+                </Link>
+                {s.status === 'draft' && s.stream_url && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="hidden text-xs text-ink/60 sm:inline">Probar audio</span>
+                    <PlayButton station={{ id: s.id, name: s.name, slug: s.slug, logo_url: s.logo_url, stream_url: s.stream_url, stream_format: s.stream_format, country_name: countryName }} />
+                  </div>
+                )}
+              </li>
+            );
+          })}</ul>}
         <Pagination basePath="/admin/radios" params={{ q: q || undefined, estado, orden: sp.orden }} page={page} total={count ?? 0} pageSize={SIZE} />
       </div>
     </>
