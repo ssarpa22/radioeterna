@@ -2,84 +2,77 @@
 
 Directorio internacional de radios cristianas y evangélicas con reproductor en vivo. Interfaz pública en español. *Una plataforma desarrollada por Lazo Sur.*
 
-> **Estado:** el código está completo hasta la Fase 4 pero **no se ha construido ni ejecutado** con Next.js ni contra un Postgres real. Lee `docs/STATUS.md` antes de confiar en cualquier función.
+> **Estado:** aplicación desplegada en producción y en evolución. La CI valida TypeScript, ESLint, tests y build; las pruebas de navegador de producción son de solo lectura. Consulta `docs/STATUS.md` para conocer qué está verificado y qué sigue pendiente.
 
 ## 1. Qué es
-Radio Eterna **no aloja audio**: guarda fichas de radios y sus enlaces de transmisión; el navegador del oyente se conecta directo a cada radio. Incluye directorio público, panel de administración, formulario de solicitudes y verificador de enlaces.
+Radio Eterna **no aloja audio**: guarda fichas de radios y sus enlaces de transmisión; el navegador del oyente se conecta directamente a cada emisora. Incluye directorio público, fichas individuales, reproductor persistente, panel de administración, formulario de solicitudes e importador de borradores.
 
 ## 2. Tecnología
-Next.js 15 (App Router) · React 19 · TypeScript estricto · Tailwind CSS 3 · Supabase (Postgres, Auth, RLS) · Zod · hls.js · lucide-react · Vitest. Sin shadcn/ui, Framer Motion ni React Hook Form (ver `docs/STATUS.md`).
+Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 3 · Supabase (Postgres, Auth, RLS) · Zod · hls.js · lucide-react · Vitest.
 
 ## 3. Arquitectura
-`app/` rutas → `components/` UI → `lib/data/` acceso a datos → `lib/validation/` Zod → `lib/supabase/` clientes → Postgres (migraciones + RLS).
-- **Seguridad en la base:** RLS, restricción de publicación (solo radios verificadas) y auditoría por *triggers*.
-- **Server Actions** para el panel y el formulario público; **ninguna usa la service-role key**.
-- **Tres estados distintos:** solicitud *enviada* → radio *verificada* → radio *publicada*.
-- **Reproductor:** un único `<audio>` en el layout raíz (no se corta al navegar). Decisiones y supuestos: `docs/ARCHITECTURE.md`, `docs/PHASE2-NOTES.md`, `docs/PHASE3-NOTES.md`.
+`src/app/` rutas → `src/components/` UI → `src/lib/data/` acceso a datos → `src/lib/validation/` Zod → `src/lib/supabase/` clientes → Postgres (migraciones + RLS).
+- **Seguridad en la base:** RLS, permisos por columna para lecturas públicas, restricción de publicación y auditoría por triggers.
+- **Server Actions** para el panel y el formulario público; la aplicación no necesita la clave service-role.
+- **Flujo editorial:** solicitud enviada → revisión/verificación → publicación. Las radios importadas se crean como borradores.
+- **Reproductor:** un único elemento de audio en el layout raíz; la reproducción puede continuar al navegar.
+- **Sitios oficiales:** el enlace externo solo se muestra tras una comprobación HTTPS explícita desde administración. La comprobación no garantiza que el contenido sea benigno ni sustituye futuras reverificaciones.
 
-## 4. Estructura de carpetas
+## 4. Estructura
 ```
-src/app/            rutas públicas, /admin, /api
-src/components/     UI, player/, forms/, admin/
-src/lib/            data/, validation/, security/ (SSRF, verificador), supabase/, auth, rate-limit, api
-supabase/migrations 0001–0005 (esquema, RLS, datos de referencia, conteos, flujo admin)
-supabase/seed.sql   solo desarrollo local (radios DEMO)
-tests/              pruebas Vitest
-docs/               arquitectura, notas por fase, despliegue, mantenimiento, estado
+src/app/             rutas públicas, /admin y /api
+src/components/      UI, reproductor, formularios y administración
+src/lib/             datos, validación, seguridad, Supabase, auth y rate limit
+supabase/migrations/ migraciones SQL numeradas
+supabase/seed.sql    datos DEMO solo para desarrollo local
+tests/               pruebas automatizadas
+docs/                arquitectura, despliegue, mantenimiento y estado
 ```
 
 ## 5. Base de datos
-Tablas: `stations`, `countries`, `categories`, `station_categories`, `station_submissions`, `station_status_logs`, `favorites`, `site_settings`, `audit_logs`, `admin_profiles`. Borrado lógico (`deleted_at`), `content_type` para futuros podcasts/sermones, `is_demo` para datos de ejemplo (ocultos salvo `allow_demo_data=true`). Detalle en `supabase/migrations/`.
+Tablas principales: `stations`, `countries`, `categories`, `station_categories`, `station_submissions`, `station_status_logs`, `favorites`, `site_settings`, `audit_logs` y `admin_profiles`. El esquema y sus cambios están versionados en `supabase/migrations/`.
 
-## 6. Instalación
-Requisitos: Node 20+ (probado el diseño con 22), Docker, Supabase CLI. 
-```
-npm install
+## 6. Instalación y desarrollo local
+Requisitos: Node.js 20+, Docker y Supabase CLI.
+```bash
+npm ci
 cp .env.example .env.local
+supabase start
+npm run dev
 ```
+Configura en `.env.local` las variables locales que muestra Supabase y las demás indicadas en `.env.example`. Para reconstruir la base local desde cero, revisa primero las notas de migraciones en `docs/DEPLOYMENT.md`; `supabase db reset` también carga `seed.sql` con radios DEMO.
 
 ## 7. Variables de entorno
-| Variable | Visible en el navegador | Descripción |
-|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | sí | URL pública (`http://localhost:3000` en local). |
-| `NEXT_PUBLIC_SUPABASE_URL` | sí | URL de la API de Supabase. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | sí | Clave anónima (protegida por RLS). |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | no | Límites de solicitudes fiables (opcional; sin ellos, memoria por instancia). |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | site key sí / secret no | Anti-spam (opcional; sin secret la verificación se omite). |
-| `SUPABASE_SERVICE_ROLE_KEY` | no | **No se usa.** No la configures. |
+| Variable | Uso |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | URL pública de la aplicación. |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública anon/publishable protegida por RLS. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Rate limiting distribuido; opcional, con fallback limitado por instancia. |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile; ambas necesarias para habilitar solicitudes públicas en producción. |
+| `SUPABASE_SERVICE_ROLE_KEY` | No es necesaria para el flujo actual; no la expongas al navegador. |
 
-## 8–9. Supabase y migraciones
-Local: `supabase start` (aplica `0001`–`0005`) y `supabase db reset` (además carga `seed.sql` con radios DEMO). Copia a `.env.local` la *API URL* y la *anon key* que imprime `supabase start`. Producción: ver `docs/DEPLOYMENT.md`.
+## 8. Supabase y migraciones
+Las migraciones SQL están en `supabase/migrations/`. En producción, aplica cambios de esquema de forma controlada: revisa el SQL, haz backup cuando corresponda y prueba primero en un proyecto local o staging. **No ejecutes `seed.sql` en producción.** Algunas migraciones requieren validación previa o pueden haber sido aplicadas manualmente desde SQL Editor; consulta `docs/DEPLOYMENT.md` antes de usar `supabase db push` para evitar repetir cambios ya aplicados.
 
-## 10. Crear el primer administrador
-`docs/ADMIN-SETUP.md`.
+## 9. Primer administrador
+Consulta `docs/ADMIN-SETUP.md`.
 
-## 11. Desarrollo local
+## 10. Comprobaciones locales
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
-npm run dev          # http://localhost:3000
-npm run typecheck && npm run lint && npm test && npm run build
-```
 
-## 12. Despliegue en producción
-`docs/DEPLOYMENT.md`: dominio, DNS, HTTPS, Supabase, variables, migraciones, primer admin, despliegue, pruebas y actualización.
+## 11. Despliegue
+Consulta `docs/DEPLOYMENT.md` para entornos, variables, migraciones y lista de comprobación de producción.
 
-## 13. API pública (solo lectura)
-Respuestas: éxito `{ "data": …, "meta": … }`; error `{ "error": { "code", "message" } }`. Límite: 120 solicitudes/min por IP (`429` + `Retry-After`). Solo radios publicadas.
+## 12. API pública (solo lectura)
+- `GET /api/stations`: listado público con búsqueda, filtros, paginación y orden.
+- `GET /api/stations/:slug`: ficha de una radio publicada.
+- Las operaciones administrativas se realizan mediante Server Actions protegidas por sesión y rol; no forman parte de la API pública.
 
-**`GET /api/stations`** — parámetros opcionales: `q` (nombre, máx. 80), `pais` (slug), `categoria` (slug), `pagina` (≥1), `limite` (1–60, por defecto 20), `orden` (`name` | `recent`), `destacadas=true`. Valores inválidos vuelven al valor por defecto. Respuesta `200`: `data` = lista de radios (`id, slug, name, short_description, city, logo_url, stream_url, stream_format, is_featured, verification_status, published_at, country_name, country_slug, category_name, category_slug`), `meta` = `{ total, page, page_size }`.
-
-**`GET /api/stations/:slug`** — `200` con `data` = ficha pública (`id, slug, name, short_description, description, city, language, stream_url, stream_format, logo_url, website_url, social_links, is_featured, verified, published_at, country{name,slug}, category{name,slug}`); `404 not_found` si no existe o no está publicada; `500 internal_error`.
-
-Operaciones de administración (crear/editar/publicar/verificar, solicitudes, categorías, países, configuración) **no** son una API REST: son Server Actions protegidas por sesión y rol (`src/app/admin/actions.ts`). Esto es una decisión de diseño; si necesitas una API administrativa para terceros, debe añadirse aparte.
-
-## 14–15. Backups y mantenimiento
-`docs/MAINTENANCE.md`. **Ningún backup ni monitoreo está configurado todavía.** Supabase Free no incluye backups automáticos.
-
-## 16. Limitaciones conocidas
-`docs/STATUS.md` (implementado / parcial / requiere configuración / limitaciones / hallazgos de seguridad).
-
-## 17. Servicios externos y costos
-Supabase (gratis → 25 USD/mes con backups y sin pausa), Vercel (Hobby es solo no comercial → Pro 20 USD/mes), dominio (~10–15 USD/año, estimación), Upstash y Turnstile (capa gratuita). Tabla y escenarios con fuentes en `docs/DEPLOYMENT.md`. No se contrata nada sin tu aprobación.
-
-## Legal
-`/privacidad` y `/terminos` son **borradores pendientes de revisión profesional**. El audio y las marcas pertenecen a cada radio; Radio Eterna no los aloja ni retransmite.
+## 13. Mantenimiento y limitaciones
+Consulta `docs/MAINTENANCE.md` para backups y mantenimiento. Aún quedan tareas de auditoría RLS, pruebas E2E funcionales, CSP, rendimiento, reverificación automática de webs y validación sistemática de streams. Las páginas legales `/privacidad` y `/terminos` siguen siendo borradores pendientes de revisión profesional.
