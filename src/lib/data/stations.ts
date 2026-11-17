@@ -13,14 +13,33 @@ export async function searchStations(p: StationQuery = {}): Promise<Paginated<St
   return data as Paginated<StationCard>;
 }
 
+const STATION_DETAIL_BASE_COLUMNS =
+  'id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)';
+
+function isMissingWebsiteSecurityColumn(error: { code?: string; message?: string }): boolean {
+  if (error.code === '42703' || error.code === 'PGRST204') return true;
+  return /website_is_secure/i.test(error.message) && /(column|schema cache|does not exist|could not find)/i.test(error.message);
+}
+
 export async function getStationBySlug(slug: string) {
   const supabase = await createClient();
-  // Keep this projection explicit: anonymous clients must never fetch internal verification data.
-  const { data, error } = await supabase.from('stations')
-    .select('id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,website_is_secure,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)')
+  // The public detail page must remain readable even if migration 0007 has not
+  // reached the database yet. In that case, fail closed for external websites.
+  const current = await supabase.from('stations')
+    .select(`id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,website_is_secure,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)`)
     .eq('slug', slug).eq('status', 'published').is('deleted_at', null).maybeSingle();
-  if (error) throw new Error(`getStationBySlug: ${error.message}`);
-  return data;
+
+  if (!current.error) return current.data;
+  if (!isMissingWebsiteSecurityColumn(current.error)) {
+    throw new Error(`getStationBySlug: ${current.error.message}`);
+  }
+
+  console.warn('[stations] website_is_secure column is missing; loading station without its external website link until migration 0007 is applied.');
+  const legacy = await supabase.from('stations')
+    .select(STATION_DETAIL_BASE_COLUMNS)
+    .eq('slug', slug).eq('status', 'published').is('deleted_at', null).maybeSingle();
+  if (legacy.error) throw new Error(`getStationBySlug: ${legacy.error.message}`);
+  return legacy.data ? { ...legacy.data, website_is_secure: false } : null;
 }
 
 export async function listCountries(): Promise<Country[]> {
