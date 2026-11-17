@@ -16,7 +16,7 @@ Este documento distingue lo que está implementado, lo que se ha comprobado y lo
 | Protección básica del panel | `/admin` redirige al login sin sesión |
 | Fichas de radios | Se corrigió el error 404 causado por la consulta de la nueva columna; el usuario confirmó que las fichas volvieron a funcionar |
 | Migración 0007 | El usuario confirmó que agregó `stations.website_is_secure` en Supabase mediante SQL Editor |
-| Verificación de webs oficiales | Implementada en el panel; pendiente completar una prueba funcional con una emisora real |
+| Verificación de webs oficiales | Probada manualmente en producción: el panel confirmó una URL HTTPS válida |
 | Supabase / RLS en producción | No auditado de punta a punta |
 | Reproductor y streams reales | No validados sistemáticamente |
 | Carga y rendimiento | No medidos con k6/Lighthouse |
@@ -38,7 +38,7 @@ Los smoke tests de Playwright son de solo lectura: no inician sesión, no envía
 
 1. **Pruebas funcionales de administración y RLS:** ejecutar pruebas aisladas con Supabase local para anon, authenticated y staff; cubrir solicitudes, aprobación, rechazo, CRUD y permisos. No automatizar escrituras contra producción.
 2. **Prueba manual del sitio oficial:** desde el panel, verificar una URL HTTPS válida; confirmar que el sitio aparece en la ficha pública. Probar también una URL HTTP o inválida y confirmar que permanece oculta. Si se modifica la URL, verificar que el estado seguro se invalida.
-3. **Vigencia de la verificación:** hoy el estado es booleano y no tiene fecha de expiración ni reverificación automática. Evaluar guardar la fecha de verificación y establecer una política de renovación.
+3. **Vigencia de la verificación:** implementar fecha de verificación y vencimiento a los 30 días; el enlace debe ocultarse automáticamente al vencer y requerir una nueva comprobación manual.
 4. **Content-Security-Policy:** diseñar e introducir CSP en modo report-only primero. Debe contemplar Supabase, Turnstile y orígenes externos de streams.
 5. **Rendimiento:** incorporar Lighthouse y pruebas de carga moderadas en staging, nunca lanzar estrés contra producción.
 6. **Dependencias:** revisar periódicamente `npm outdated` y `npm audit`; actualizar en ramas separadas, regenerar el lockfile con npm y ejecutar typecheck, lint, tests y build. Mantener Next.js 15 salvo decisión explícita de migrar de versión mayor.
@@ -55,7 +55,7 @@ No publicar claves service-role en el cliente ni en el repositorio. La aplicaci�
 - Sin correos transaccionales ni notificaciones automáticas.
 - Favoritas guardadas localmente, no sincronizadas entre dispositivos.
 - Sin metadatos avanzados de reproducción.
-- No hay reverificación automática de streams ni de sitios oficiales.
+- No hay reverificación automática de streams ni de sitios oficiales; los sitios oficiales dejan de mostrarse 30 días después de su última verificación correcta.
 - La verificación HTTPS confirma TLS y redirecciones en el momento de la prueba; no certifica que el contenido externo sea confiable ni que no cambie después.
 - Streams HTTP pueden ser bloqueados desde páginas HTTPS y HLS depende del CORS de cada emisora.
 - Las páginas legales son borradores y requieren revisión profesional.
