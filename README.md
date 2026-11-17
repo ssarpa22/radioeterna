@@ -31,9 +31,9 @@ Más contexto: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/MAINTENANCE.m
 
 ## Base de datos y migraciones
 
-Las migraciones versionadas están en `supabase/migrations/` (actualmente `0001` a `0008`). Incluyen esquema, RLS, flujo administrativo, permisos de columnas públicas y verificación HTTPS de sitios oficiales.
+Las migraciones versionadas están en `supabase/migrations/` (actualmente `0001` a `0009`). Incluyen esquema, RLS, flujo administrativo, permisos de columnas públicas y verificación HTTPS de sitios oficiales.
 
-La migración `0007_official_website_security.sql` agrega `stations.website_is_secure` y fue aplicada manualmente en producción. La migración `0008_website_verification_expiry.sql` agrega `stations.website_verified_at`; debe aplicarse en producción antes de usar la nueva vigencia de verificaciones. La comprobación HTTPS vence a los 30 días y, hasta volver a verificar, el enlace oficial permanece oculto. Al trabajar con otra base, revisá el historial y aplicá únicamente las migraciones pendientes. No ejecutes migraciones a ciegas sobre una base existente.
+La migración `0007_official_website_security.sql` agrega `stations.website_is_secure` y fue aplicada manualmente en producción. La migración `0008_website_verification_expiry.sql` agrega `stations.website_verified_at`. La migración `0009_website_monitoring_events.sql` crea el historial privado de verificaciones automáticas. Aplicá únicamente las migraciones pendientes. La comprobación HTTPS vence a los 30 días y, hasta volver a verificar, el enlace oficial permanece oculto. Al trabajar con otra base, revisá el historial y aplicá únicamente las migraciones pendientes. No ejecutes migraciones a ciegas sobre una base existente.
 
 `supabase/seed.sql` contiene datos DEMO para desarrollo local: **no ejecutarlo en producción**.
 
@@ -65,10 +65,10 @@ npm run build
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública de Supabase, protegida por RLS |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Clave pública de Cloudflare Turnstile |
-| `TURNSTILE_SECRET_KEY` | Clave privada para validar Turnstile en el servidor |
+| `TURNSTILE_SECRET_KEY` | Clave privada para validar Turnstile en el servidor |\n| `SUPABASE_SERVICE_ROLE_KEY` | Solo endpoint privado del monitor; únicamente en Vercel/server-side |\n| `WEBSITE_MONITOR_SECRET` | Autenticación del monitor automático; también como GitHub Actions secret |
 | `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` | Rate limiting distribuido, si está configurado |
 
-En producción, Turnstile debe tener configuradas ambas claves; si falta la configuración, el formulario público rechaza envíos. No agregues claves privadas al código ni al repositorio. La aplicación no necesita `SUPABASE_SERVICE_ROLE_KEY`.
+En producción, Turnstile debe tener configuradas ambas claves; si falta la configuración, el formulario público rechaza envíos. No agregues claves privadas al código ni al repositorio. La clave `SUPABASE_SERVICE_ROLE_KEY` nunca debe exponerse al cliente ni guardarse en el repositorio; solo la usa el endpoint privado de monitoreo.
 
 ## Panel de administración
 
@@ -93,7 +93,7 @@ La guía de despliegue está en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) y las t
 
 ## Limitaciones conocidas
 
-- La verificación HTTPS vence a los 30 días; no garantiza el contenido del sitio ni realiza reverificación automática.
+- La verificación HTTPS vence a los 30 días. El monitoreo automático diario de sitios oficiales se ejecuta con GitHub Actions una vez configurados los secretos y aplicada la migración 0009; no garantiza el contenido del sitio.
 - No hay backups, monitoreo ni alertas configurados automáticamente.
 - Los streams pueden dejar de funcionar; HLS depende también de la configuración CORS de cada emisora.
 - Las páginas legales son borradores pendientes de revisión profesional.
