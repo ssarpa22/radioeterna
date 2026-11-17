@@ -31,9 +31,9 @@ Más contexto: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/MAINTENANCE.m
 
 ## Base de datos y migraciones
 
-Las migraciones versionadas están en `supabase/migrations/` (actualmente `0001` a `0007`). Incluyen esquema, RLS, flujo administrativo, permisos de columnas públicas y verificación HTTPS de sitios oficiales.
+Las migraciones versionadas están en `supabase/migrations/` (actualmente `0001` a `0008`). Incluyen esquema, RLS, flujo administrativo, permisos de columnas públicas y verificación HTTPS de sitios oficiales.
 
-La migración `0007_official_website_security.sql` agrega `stations.website_is_secure`. En producción fue aplicada manualmente mediante SQL Editor; al trabajar con otra base, revisá el historial de migraciones y aplicá únicamente las pendientes. No ejecutes migraciones a ciegas sobre una base existente.
+La migración `0007_official_website_security.sql` agrega `stations.website_is_secure` y fue aplicada manualmente en producción. La migración `0008_website_verification_expiry.sql` agrega `stations.website_verified_at`; debe aplicarse en producción antes de usar la nueva vigencia de verificaciones. La comprobación HTTPS vence a los 30 días y, hasta volver a verificar, el enlace oficial permanece oculto. Al trabajar con otra base, revisá el historial y aplicá únicamente las migraciones pendientes. No ejecutes migraciones a ciegas sobre una base existente.
 
 `supabase/seed.sql` contiene datos DEMO para desarrollo local: **no ejecutarlo en producción**.
 
