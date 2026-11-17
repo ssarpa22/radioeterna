@@ -38,7 +38,7 @@ Los smoke tests de Playwright son de solo lectura: no inician sesión, no envía
 
 1. **Pruebas funcionales de administración y RLS:** ejecutar pruebas aisladas con Supabase local para anon, authenticated y staff; cubrir solicitudes, aprobación, rechazo, CRUD y permisos. No automatizar escrituras contra producción.
 2. **Prueba manual del sitio oficial:** desde el panel, verificar una URL HTTPS válida; confirmar que el sitio aparece en la ficha pública. Probar también una URL HTTP o inválida y confirmar que permanece oculta. Si se modifica la URL, verificar que el estado seguro se invalida.
-3. **Vigencia de la verificación:** implementar fecha de verificación y vencimiento a los 30 días; el enlace debe ocultarse automáticamente al vencer y requerir una nueva comprobación manual.
+3. **Vigencia de la verificación:** implementada con `website_verified_at` y vencimiento a los 30 días. Falta aplicar la migración 0008 en producción y comprobar el comportamiento después del despliegue.
 4. **Content-Security-Policy:** diseñar e introducir CSP en modo report-only primero. Debe contemplar Supabase, Turnstile y orígenes externos de streams.
 5. **Rendimiento:** incorporar Lighthouse y pruebas de carga moderadas en staging, nunca lanzar estrés contra producción.
 6. **Dependencias:** revisar periódicamente `npm outdated` y `npm audit`; actualizar en ramas separadas, regenerar el lockfile con npm y ejecutar typecheck, lint, tests y build. Mantener Next.js 15 salvo decisión explícita de migrar de versión mayor.
