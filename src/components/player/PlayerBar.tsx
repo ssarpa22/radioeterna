@@ -12,8 +12,8 @@ export function PlayerBar() {
   const { station, status } = p;
   return (
     <>
-      <div className="h-24" aria-hidden />
-      <section aria-label="Reproductor de radio" className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/40 bg-ink text-paper shadow-[0_-8px_30px_rgba(10,23,48,.35)]">
+      <div className="h-24" style={{ height: 'calc(6rem + env(safe-area-inset-bottom))' }} aria-hidden />
+      <section aria-label="Reproductor de radio" className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/40 bg-ink text-paper shadow-[0_-8px_30px_rgba(10,23,48,.35)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="wrap flex items-center gap-3 py-3">
           <StationLogo name={station.name} src={station.logo_url} className="h-12 w-12" />
           <div className="min-w-0 flex-1">
