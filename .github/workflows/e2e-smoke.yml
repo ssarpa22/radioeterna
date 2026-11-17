@@ -1,0 +1,52 @@
+name: Radio Eterna browser smoke tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '25 11 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: radio-eterna-browser-smoke
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke:
+    name: Read-only production browser checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install temporary Playwright runner
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run read-only browser smoke tests
+        run: npx playwright test
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: https://radioeterna.vercel.app
+
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
