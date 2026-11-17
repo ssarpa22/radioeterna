@@ -65,7 +65,9 @@ npm run build
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública de Supabase, protegida por RLS |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Clave pública de Cloudflare Turnstile |
-| `TURNSTILE_SECRET_KEY` | Clave privada para validar Turnstile en el servidor |\n| `SUPABASE_SERVICE_ROLE_KEY` | Solo endpoint privado del monitor; únicamente en Vercel/server-side |\n| `WEBSITE_MONITOR_SECRET` | Autenticación del monitor automático; también como GitHub Actions secret |
+| `TURNSTILE_SECRET_KEY` | Clave privada para validar Turnstile en el servidor |
+| `SUPABASE_SERVICE_ROLE_KEY` | Solo endpoint privado del monitor; únicamente en Vercel/server-side |
+| `WEBSITE_MONITOR_SECRET` | Autenticación del monitor automático; también como GitHub Actions secret |
 | `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` | Rate limiting distribuido, si está configurado |
 
 En producción, Turnstile debe tener configuradas ambas claves; si falta la configuración, el formulario público rechaza envíos. No agregues claves privadas al código ni al repositorio. La clave `SUPABASE_SERVICE_ROLE_KEY` nunca debe exponerse al cliente ni guardarse en el repositorio; solo la usa el endpoint privado de monitoreo.
@@ -94,7 +96,7 @@ La guía de despliegue está en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) y las t
 ## Limitaciones conocidas
 
 - La verificación HTTPS vence a los 30 días. El monitoreo automático diario de sitios oficiales se ejecuta con GitHub Actions una vez configurados los secretos y aplicada la migración 0009; no garantiza el contenido del sitio.
-- No hay backups, monitoreo ni alertas configurados automáticamente.
+- No hay backups automáticos ni alertas por correo; las incidencias del monitor de sitios oficiales quedan en GitHub Actions y Supabase.
 - Los streams pueden dejar de funcionar; HLS depende también de la configuración CORS de cada emisora.
 - Las páginas legales son borradores pendientes de revisión profesional.
 
