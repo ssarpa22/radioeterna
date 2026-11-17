@@ -15,7 +15,8 @@ Este documento distingue lo que está implementado, lo que se ha comprobado y lo
 | SEO básico | `robots.txt` y `sitemap.xml` respondieron HTTP 200 |
 | Protección básica del panel | `/admin` redirige al login sin sesión |
 | Fichas de radios | Se corrigió el error 404 causado por la consulta de la nueva columna; el usuario confirmó que las fichas volvieron a funcionar |
-| Migración 0007 | `stations.website_is_secure` aplicada manualmente en producción |\n| Migración 0008 | Añade `stations.website_verified_at`; pendiente de aplicar en producción tras merge |
+| Migración 0007 | `stations.website_is_secure` aplicada manualmente en producción |
+| Migración 0008 | Añade `stations.website_verified_at`; pendiente de aplicar en producción tras merge |
 | Verificación de webs oficiales | Probada manualmente en producción: el panel confirmó una URL HTTPS válida |
 | Supabase / RLS en producción | No auditado de punta a punta |
 | Reproductor y streams reales | No validados sistemáticamente |
