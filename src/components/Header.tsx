@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NAV } from '@/lib/site';
 
@@ -21,7 +21,21 @@ export function Logo({ light = false }: { light?: boolean }) {
 export function Header() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => setOpen(false), [path]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
   const link = (href: string) => path === href || path.startsWith(`${href}/`);
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
@@ -31,7 +45,7 @@ export function Header() {
           {NAV.map((n) => <Link key={n.href} href={n.href} aria-current={link(n.href) ? 'page' : undefined}
             className={`rounded-full px-4 py-2 text-sm font-medium hover:bg-gold-soft ${link(n.href) ? 'bg-gold-soft text-gold-deep' : ''}`}>{n.label}</Link>)}
         </nav>
-        <button type="button" className="grid h-11 w-11 place-items-center rounded-full hover:bg-gold-soft md:hidden" aria-expanded={open} aria-controls="menu-movil" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen((o) => !o)}>
+        <button ref={menuButtonRef} type="button" className="grid h-11 w-11 place-items-center rounded-full hover:bg-gold-soft md:hidden" aria-expanded={open} aria-controls="menu-movil" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen((o) => !o)}>
           {open ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
         </button>
       </div>
