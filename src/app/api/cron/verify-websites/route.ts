@@ -88,7 +88,7 @@ export async function GET(request: Request) {
       durationMs = result.duration_ms;
 
       const certificateInvalid = /certificado SSL/i.test(result.error ?? '');
-      const downgradedToHttp = result.final_url?.startsWith('http://') === true;
+      const downgradedToHttp = result.final_url?.startsWith('http://') === true || result.notes.some((note) => /redirección baja de https a http/i.test(note));
 
       if (certificateInvalid) {
         outcome = 'invalid_certificate';
