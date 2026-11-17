@@ -21,14 +21,30 @@ const LATAM_COUNTRIES = [
   'MX', 'NI', 'PA', 'PE', 'PR', 'PY', 'SV', 'UY', 'VE',
 ] as const;
 
-const TAGS = ['christian', 'gospel', 'cristiana', 'evangelica'] as const;
+const TAGS = [
+  'christian', 'gospel', 'cristiana', 'evangelica',
+  'cristiano', 'evangelico', 'adoracion', 'biblia', 'worship',
+] as const;
+
+// Radio Browser no siempre etiqueta bien las emisoras argentinas.
+// Estas búsquedas por nombre complementan las búsquedas por tags sin ampliar
+// indiscriminadamente el catálogo de los demás países.
+const ARGENTINA_NAME_QUERIES = [
+  'radio cristiana',
+  'radio evangelica',
+  'radio cristiano',
+  'radio evangélica',
+  'musica cristiana',
+  'adoracion',
+  'gospel',
+] as const;
 const MIRRORS = [
   'https://de1.api.radio-browser.info',
   'https://at1.api.radio-browser.info',
   'https://nl1.api.radio-browser.info',
 ];
 const API_LIMIT = 100;
-const DEFAULT_MAX_CHECKS = 250;
+const DEFAULT_MAX_CHECKS = 400;
 const BATCH_SIZE = 5;
 const VERIFY_TIMEOUT_MS = 8_000;
 
@@ -104,15 +120,16 @@ function mapLanguage(raw: string | undefined): string {
   return /^[a-z]{2,8}$/.test(first) ? first : 'es';
 }
 
-async function fetchOneQuery(countryCode: string, tag: string): Promise<RadioBrowserStation[]> {
+async function fetchOneQuery(countryCode: string, tag?: string, name?: string): Promise<RadioBrowserStation[]> {
   const params = new URLSearchParams({
     countrycode: countryCode,
-    tag,
     lastcheckok: '1',
     limit: String(API_LIMIT),
     order: 'votes',
     reverse: 'true',
   });
+  if (tag) params.set('tag', tag);
+  if (name) params.set('name', name);
 
   for (const mirror of MIRRORS) {
     try {
@@ -137,19 +154,34 @@ async function fetchRadioBrowserStations(): Promise<RadioBrowserStation[]> {
   let completedQueries = 0;
 
   // Consultas por país para que los países con menos votos no queden fuera
-  // de un único ranking global. Se espacian para no martillar la API pública.
+  // de un ranking global. Se amplían sin cambiar de proveedor ni usar scraping.
+  const totalQueries = LATAM_COUNTRIES.length * TAGS.length + ARGENTINA_NAME_QUERIES.length;
+  const collect = (rows: RadioBrowserStation[]) => {
+    for (const station of rows) {
+      if (station.stationuuid && !byUuid.has(station.stationuuid)) {
+        byUuid.set(station.stationuuid, station);
+      }
+    }
+  };
+
   for (const countryCode of LATAM_COUNTRIES) {
     for (const tag of TAGS) {
-      const rows = await fetchOneQuery(countryCode, tag);
-      for (const station of rows) {
-        if (station.stationuuid && !byUuid.has(station.stationuuid)) {
-          byUuid.set(station.stationuuid, station);
-        }
-      }
+      collect(await fetchOneQuery(countryCode, tag));
       completedQueries++;
       await sleep(350);
     }
-    console.log(`[API] ${countryCode}: consultas completadas (${completedQueries}/${LATAM_COUNTRIES.length * TAGS.length})`);
+
+    // Búsquedas adicionales dirigidas a Argentina: muchas emisoras locales
+    // aparecen en Radio Browser con tags incompletos o inconsistentes.
+    if (countryCode === 'AR') {
+      for (const name of ARGENTINA_NAME_QUERIES) {
+        collect(await fetchOneQuery(countryCode, undefined, name));
+        completedQueries++;
+        await sleep(350);
+      }
+    }
+
+    console.log(`[API] ${countryCode}: consultas completadas (${completedQueries}/${totalQueries})`);
   }
 
   return [...byUuid.values()];
@@ -164,6 +196,11 @@ function buildCandidates(rows: RadioBrowserStation[]): Candidate[] {
     const countryCode = (station.countrycode ?? '').toUpperCase().trim();
     if (!LATAM_COUNTRIES.includes(countryCode as (typeof LATAM_COUNTRIES)[number])) continue;
     if (station.lastcheckok !== 1) continue;
+
+    // Las búsquedas por nombre de Argentina pueden devolver resultados que no
+    // sean cristianos. Exigimos una señal temática en el nombre o en los tags.
+    const christianSignal = normalized(`${station.name ?? ''} ${station.tags ?? ''}`);
+    if (!/(christian|cristian|evangel|gospel|biblia|bible|worship|adoracion|alabanza|iglesia|jesus|cristo|religious|catolic)/.test(christianSignal)) continue;
 
     const streamUrl = (station.url_resolved || station.url || '').trim();
     // Los streams HTTP se excluyen: el navegador puede bloquear audio mixto
@@ -330,6 +367,13 @@ async function main() {
     const outDir = path.resolve(process.cwd(), 'radio-import-output');
     fs.mkdirSync(outDir, { recursive: true });
     const outPath = path.join(outDir, 'radio_browser_review.json');
+    const countBy = (key: 'countryCode' | 'language' | 'format') =>
+      verified.reduce<Record<string, number>>((counts, station) => {
+        const value = station[key] || 'unknown';
+        counts[value] = (counts[value] ?? 0) + 1;
+        return counts;
+      }, {});
+
     fs.writeFileSync(outPath, JSON.stringify({
       generatedAt: new Date().toISOString(),
       source: 'Radio Browser',
@@ -337,6 +381,13 @@ async function main() {
       candidates: candidates.length,
       checked: Math.min(candidates.length, maxChecks),
       verified: verified.length,
+      summary: {
+        byCountry: countBy('countryCode'),
+        byLanguage: countBy('language'),
+        byFormat: countBy('format'),
+        missingLogo: verified.filter((station) => !station.logoUrl).length,
+        missingWebsite: verified.filter((station) => !station.websiteUrl).length,
+      },
       stations: verified,
     }, null, 2), 'utf8');
     console.log(`Informe generado: ${outPath}`);

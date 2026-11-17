@@ -7,7 +7,7 @@ El importador `import-radios.ts` consulta Radio Browser para los países de Lati
 - Node.js compatible con el proyecto.
 - Acceso a Internet.
 - No necesita variables de Supabase ni una Service Role Key.
-- Usa `npx --yes tsx` para ejecutar TypeScript sin agregar dependencias al proyecto.
+- Usa `npx.cmd --yes tsx` para ejecutar TypeScript sin agregar dependencias al proyecto.
 
 ## Ejecución
 
@@ -29,7 +29,7 @@ Para generar un informe JSON revisable:
 npx --yes tsx scripts/import-radios.ts --json
 ```
 
-El importador verifica hasta 250 emisoras por defecto. Se puede aumentar el límite:
+El importador amplía las etiquetas cristianas consultadas en todos los países y agrega búsquedas por nombre específicas para Argentina. Verifica hasta 400 emisoras por defecto. Se puede aumentar el límite si hay más candidatas:
 
 ```powershell
 npx --yes tsx scripts/import-radios.ts --sql --max-checks=400
