@@ -41,7 +41,10 @@ export async function saveStation(_p: FormState, fd: FormData): Promise<FormStat
     social_links: social, display_order: d.display_order, ...(d.stream_format ? { stream_format: d.stream_format } : {}) };
   let id = d.id;
   if (id) {
-    const { data, error } = await supabase.from('stations').update(row).eq('id', id).select('id');
+    const { data: previous, error: previousError } = await supabase.from('stations').select('website_url').eq('id', id).maybeSingle();
+    if (previousError || !previous) return invalid(fd, {}, 'No se pudo comprobar el sitio web anterior.');
+    const websiteChanged = (previous.website_url ?? null) !== (d.website_url ?? null);
+    const { data, error } = await supabase.from('stations').update({ ...row, ...(websiteChanged ? { website_is_secure: false } : {}) }).eq('id', id).select('id');
     if (error) return invalid(fd, {}, dbError(error));
     if (!data?.length) return invalid(fd, {}, 'No se encontró la radio o no tienes permiso para editarla.');
   } else {
@@ -59,7 +62,7 @@ export async function saveStation(_p: FormState, fd: FormData): Promise<FormStat
   return { ok: true, message: 'Cambios guardados. Si cambiaste el enlace de transmisión, debes verificarlo de nuevo antes de publicar.' };
 }
 
-export type StationCommand = 'publish' | 'unpublish' | 'suspend' | 'archive' | 'restore' | 'feature' | 'unfeature' | 'verify' | 'verify_manual' | 'delete';
+export type StationCommand = 'publish' | 'unpublish' | 'suspend' | 'archive' | 'restore' | 'feature' | 'unfeature' | 'verify' | 'verify_website' | 'verify_manual' | 'delete';
 export async function stationCommand(id: string, cmd: StationCommand): Promise<CommandResult> {
   const staff = await requireStaff(cmd === 'delete' ? 'admin' : 'editor');
   if (!uuid.safeParse(id).success) return { ok: false, message: 'Identificador no válido.' };
@@ -82,6 +85,23 @@ export async function stationCommand(id: string, cmd: StationCommand): Promise<C
     case 'verify_manual': {
       const now = new Date().toISOString();
       return update({ verification_status: 'manual', last_verified_at: now, last_verification_result: { manual: true, verified_by: staff.name, checked_at: now } }, 'Marcada como verificada manualmente.');
+    }
+    case 'verify_website': {
+      if (!(await rateLimit(`verify-website:${staff.id}`, 10, 60))) return { ok: false, message: 'Demasiadas verificaciones de sitios web. Espera un minuto.' };
+      const { data: st } = await supabase.from('stations').select('website_url').eq('id', id).maybeSingle();
+      if (!st?.website_url) return { ok: false, message: 'Esta radio no tiene un sitio web cargado.' };
+      let url: URL;
+      try { url = new URL(st.website_url as string); } catch { return { ok: false, message: 'La dirección del sitio web no es válida.' }; }
+      if (url.protocol !== 'https:' || url.username || url.password) {
+        await update({ website_is_secure: false }, 'No se habilitó el sitio: debe usar HTTPS y no incluir credenciales.');
+        return { ok: false, message: 'No se habilitó el sitio: debe usar HTTPS y no incluir credenciales.' };
+      }
+      const result = await verifyStream(url.toString(), { timeoutMs: 8_000 });
+      const secure = result.reachable && !result.error && Boolean(result.final_url?.startsWith('https://'));
+      const saved = await update({ website_is_secure: secure }, secure
+        ? 'Sitio web comprobado: respondió por HTTPS con un certificado válido. El botón ya puede mostrarse.'
+        : `Sitio web no habilitado: ${result.error || result.notes[0] || 'no se pudo confirmar una conexión HTTPS válida'}`);
+      return { ...saved, ok: saved.ok && secure };
     }
     case 'verify': {
       if (!(await rateLimit(`verify:${staff.id}`, 20, 60))) return { ok: false, message: 'Demasiadas verificaciones seguidas. Espera un minuto.' };
