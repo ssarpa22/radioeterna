@@ -1,5 +1,5 @@
 name: Dependency refresh (temporary)
-# Regenerate the npm lockfile in CI, validate the resulting dependency tree, and include Vite's required peer dependency.
+# Regenerate the npm lockfile in CI, validate the resulting dependency tree, and include Vite's required peer dependency and align the PostCSS override with its direct semver range.
 
 on:
   push:
