@@ -2,7 +2,7 @@ import { ActionForm, Field } from '@/components/forms/ActionForm';
 import { saveStation } from '@/app/admin/actions';
 import type { Category, Country } from '@/types';
 
-type S = Record<string, any> | null; // eslint-disable-line @typescript-eslint/no-explicit-any
+type S = Record<string, any> | null;
 export function StationForm({ station, countries, categories, extraIds = [] }: { station?: S; countries: Country[]; categories: Category[]; extraIds?: string[] }) {
   const s = station ?? {}; const social = (s.social_links ?? {}) as Record<string, string>;
   return (

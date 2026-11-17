@@ -4,7 +4,14 @@ import { requireStaff } from '@/lib/auth';
 import { logoutAction } from '../actions';
 
 export const metadata: Metadata = { title: { default: 'Panel', template: '%s · Panel' }, robots: { index: false, follow: false } };
-const LINKS = [['/admin', 'Resumen'], ['/admin/radios', 'Radios'], ['/admin/solicitudes', 'Solicitudes'], ['/admin/categorias', 'Categorías'], ['/admin/paises', 'Países'], ['/admin/configuracion', 'Configuración']];
+const LINKS: [string, string][] = [
+  ['/admin', 'Resumen'],
+  ['/admin/radios', 'Radios'],
+  ['/admin/solicitudes', 'Solicitudes'],
+  ['/admin/categorias', 'Categorías'],
+  ['/admin/paises', 'Países'],
+  ['/admin/configuracion', 'Configuración'],
+];
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const staff = await requireStaff();   // authorization lives here AND in every action/page; middleware is only a first gate

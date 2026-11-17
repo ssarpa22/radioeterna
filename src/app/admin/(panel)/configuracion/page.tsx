@@ -8,7 +8,7 @@ import { saveSettings } from '../../actions';
 export const metadata: Metadata = { title: 'Configuración' };
 export default async function Settings() {
   await requireStaff('admin'); const { data } = await (await createClient()).from('site_settings').select('key, value');
-  const v = Object.fromEntries((data ?? []).map((r) => [r.key, r.value])) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const v = Object.fromEntries((data ?? []).map((r) => [r.key, r.value])) as Record<string, any>;
   const social = (v.social_links ?? {}) as Record<string, string>;
   return (
     <>
