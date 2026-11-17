@@ -29,11 +29,12 @@ export default async function EditStation({ params }: { params: Promise<{ id: st
       <div className="wrap grid gap-10 py-8 lg:grid-cols-[1fr_340px]">
         <div className="grid gap-8">
           <section aria-labelledby="acciones"><h2 id="acciones" className="mb-3 text-xl">Acciones</h2>
-            <StationCommands id={s.id} status={s.status} featured={s.is_featured} verification={s.verification_status} deleted={Boolean(s.deleted_at)} isAdmin={staff.role !== 'editor'} /></section>
+            <StationCommands id={s.id} status={s.status} featured={s.is_featured} verification={s.verification_status} deleted={Boolean(s.deleted_at)} isAdmin={staff.role !== 'editor'} websiteUrl={s.website_url ?? null} /></section>
           <section aria-labelledby="datos"><h2 id="datos" className="mb-3 text-xl">Datos de la radio</h2>
             <StationForm station={s} countries={c.data ?? []} categories={k.data ?? []} extraIds={(extra.data ?? []).map((e) => e.category_id)} /></section>
         </div>
         <aside className="grid content-start gap-8">
+          <section aria-labelledby="web"><h2 id="web" className="mb-3 text-xl">Seguridad del sitio oficial</h2><p className="text-sm text-ink/70">{s.website_url ? (s.website_is_secure ? 'HTTPS comprobado; el botón puede mostrarse.' : 'No verificado: el sitio oficial permanece oculto al público.') : 'No hay sitio web cargado.'}</p></section>
           <section aria-labelledby="ver"><h2 id="ver" className="mb-3 text-xl">Última verificación</h2>
             {last?.manual ? <p className="text-sm">Verificada manualmente por {last.verified_by} el {fmtDate(s.last_verified_at)}.</p>
               : last ? <VerifyResultView r={last} /> : <p className="text-sm text-ink/70">Este enlace todavía no se ha verificado.</p>}</section>
