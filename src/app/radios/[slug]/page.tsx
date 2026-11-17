@@ -44,7 +44,7 @@ export default async function StationPage({ params }: Props) {
   const more = country ? (await searchStations({ pais: country.slug, limite: 5 })).items.filter((x) => x.id !== s.id).slice(0, 4) : [];
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'RadioStation', name: s.name, url: absoluteUrl(`/radios/${s.slug}`),
-    description: s.short_description ?? s.description ?? undefined, image: s.logo_url ?? undefined, sameAs: s.website_url ? [s.website_url] : undefined,
+    description: s.short_description ?? s.description ?? undefined, image: s.logo_url ?? undefined, sameAs: s.website_url && s.website_is_secure ? [s.website_url] : undefined,
     areaServed: country?.name, inLanguage: s.language,
   };
   return (
@@ -64,7 +64,7 @@ export default async function StationPage({ params }: Props) {
               </p>
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <PlayButton station={playable} size="lg" label /><FavoriteButton station={playable} />
-                {s.website_url && <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Sitio oficial<ExternalLink className="h-4 w-4" aria-hidden /></a>}
+                {s.website_url && s.website_is_secure && <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Sitio oficial<ExternalLink className="h-4 w-4" aria-hidden /></a>}
               </div>
             </div>
           </div>
