@@ -1,0 +1,14 @@
+Radio Eterna · Phase 4 overlay (apply AFTER the Phase 3 overlay). No dependency files included.
+
+MODIFIED (existing files; diff before overwriting):
+  src/lib/site.ts            -> appended FOOTER_LINKS export (Phase 3 also added one NAV entry)
+  src/components/Footer.tsx  -> renders [...NAV, ...FOOTER_LINKS]
+  src/app/sitemap.ts         -> adds /sumar-radio, /contacto, /privacidad, /terminos
+NEW:
+  README.md                  (if you already have a README, merge instead of overwriting)
+  src/lib/api.ts, src/lib/validation/api-schemas.ts, src/lib/data/settings.ts
+  src/app/api/stations/route.ts, src/app/api/stations/[slug]/route.ts
+  src/app/{contacto,privacidad,terminos}/page.tsx, src/components/Legal.tsx
+  tests/api.test.ts
+  docs/{DEPLOYMENT,MAINTENANCE,STATUS}.md, docs/proposed/0006_column_privileges.sql  (NOT a migration; do not apply untested)
+Database: no new migrations in this phase.

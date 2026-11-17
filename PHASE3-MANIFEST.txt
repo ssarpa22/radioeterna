@@ -1,0 +1,16 @@
+Radio Eterna · Phase 3 overlay. Copy these paths over your project (radio-eterna/radio-eterna). No dependency files included.
+
+MODIFIED (1 existing file; one NAV entry added; diff it before overwriting):
+  src/lib/site.ts            -> add  { href: '/sumar-radio', label: 'Suma tu radio' }  to NAV
+
+NEW:
+  supabase/migrations/0005_admin_workflow.sql
+  src/lib/{auth,form,labels,rate-limit,slug,turnstile}.ts
+  src/lib/security/verify-stream.ts
+  src/lib/validation/admin-schemas.ts
+  src/app/sumar-radio/**            (public submission form + action)
+  src/app/admin/**                  (login, panel layout, dashboard, radios, solicitudes, categorias, paises, configuracion, actions)
+  src/components/forms/ActionForm.tsx
+  src/components/admin/**
+  tests/{admin-schemas,slug,verify-stream}.test.ts
+  docs/{ADMIN-SETUP,PHASE3-NOTES}.md
