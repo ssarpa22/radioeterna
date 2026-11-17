@@ -17,7 +17,7 @@ export async function getStationBySlug(slug: string) {
   const supabase = await createClient();
   // Keep this projection explicit: anonymous clients must never fetch internal verification data.
   const { data, error } = await supabase.from('stations')
-    .select('id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)')
+    .select('id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,website_is_secure,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)')
     .eq('slug', slug).eq('status', 'published').is('deleted_at', null).maybeSingle();
   if (error) throw new Error(`getStationBySlug: ${error.message}`);
   return data;
