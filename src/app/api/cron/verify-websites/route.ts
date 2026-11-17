@@ -137,7 +137,7 @@ export async function GET(request: Request) {
     }
   }));
 
-  const last = stations.at(-1);
+  const last = stations[stations.length - 1];
   const done = stations.length < BATCH_SIZE;
   return NextResponse.json({
     checked: stations.length,
