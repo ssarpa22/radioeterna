@@ -40,9 +40,9 @@ En producción, ambas variables de Turnstile son necesarias para habilitar los e
 
 ## Base de datos y migraciones
 
-Las migraciones SQL versionadas se encuentran en `supabase/migrations/`. La serie actual llega a `0007_official_website_security.sql`.
+Las migraciones SQL versionadas se encuentran en `supabase/migrations/`. La serie actual llega a `0008_website_verification_expiry.sql`.
 
-La migración 0007 agrega `stations.website_is_secure`, que permite ocultar los sitios oficiales hasta que se compruebe su HTTPS. En el proyecto de producción actual, el usuario confirmó haber agregado esa columna mediante SQL Editor.
+La migración 0007 agrega `stations.website_is_secure`, aplicada manualmente en el proyecto de producción. La migración 0008 agrega `stations.website_verified_at`: una verificación HTTPS correcta dura 30 días; después el sitio oficial vuelve a ocultarse hasta una nueva comprobación. Antes de desplegar esta versión en producción, aplicá la migración 0008 mediante SQL Editor, después de revisar el historial y hacer un backup.
 
 **Antes de aplicar migraciones en una base existente:**
 

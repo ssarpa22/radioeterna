@@ -24,23 +24,23 @@ function isMissingWebsiteSecurityColumn(error: { code?: string; message?: string
 
 export async function getStationBySlug(slug: string) {
   const supabase = await createClient();
-  // The public detail page must remain readable even if migration 0007 has not
-  // reached the database yet. In that case, fail closed for external websites.
+  // Keep public detail pages readable if a website-security migration is pending.
+  // In that case, fail closed and hide the external website link.
   const current = await supabase.from('stations')
-    .select(`id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,website_is_secure,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)`)
+    .select(`id,content_type,name,slug,short_description,description,country_id,city,primary_category_id,language,stream_url,stream_format,logo_url,website_url,website_is_secure,website_verified_at,social_links,verification_status,is_featured,published_at,country:countries(name,slug),category:categories!primary_category_id(name,slug)`)
     .eq('slug', slug).eq('status', 'published').is('deleted_at', null).maybeSingle();
 
   if (!current.error) return current.data;
-  if (!isMissingWebsiteSecurityColumn(current.error)) {
+  if (!isMissingWebsiteSecurityColumn(current.error) && !/website_verified_at/i.test(current.error.message ?? '')) {
     throw new Error(`getStationBySlug: ${current.error.message}`);
   }
 
-  console.warn('[stations] website_is_secure column is missing; loading station without its external website link until migration 0007 is applied.');
+  console.warn('[stations] website security columns are missing; loading station without its external website link until the migrations are applied.');
   const legacy = await supabase.from('stations')
     .select(STATION_DETAIL_BASE_COLUMNS)
     .eq('slug', slug).eq('status', 'published').is('deleted_at', null).maybeSingle();
   if (legacy.error) throw new Error(`getStationBySlug: ${legacy.error.message}`);
-  return legacy.data ? { ...legacy.data, website_is_secure: false } : null;
+  return legacy.data ? { ...legacy.data, website_is_secure: false, website_verified_at: null } : null;
 }
 
 export async function listCountries(): Promise<Country[]> {

@@ -9,6 +9,7 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import { StationLogo } from '@/components/StationLogo';
 import { StationList } from '@/components/StationRow';
 import { SectionHeading } from '@/components/ui';
+import { isWebsiteVerificationCurrent } from '@/lib/security/website-verification';
 
 type Props = { params: Promise<{ slug: string }> };
 type Rel = { name: string; slug: string } | null;
@@ -40,11 +41,12 @@ export default async function StationPage({ params }: Props) {
   const s = await getStationBySlug((await params).slug);
   if (!s) notFound();
   const country = asRel(s.country); const category = asRel(s.category);
+  const websiteIsCurrent = isWebsiteVerificationCurrent(s.website_is_secure, s.website_verified_at);
   const playable = { id: s.id, name: s.name, slug: s.slug, logo_url: s.logo_url, stream_url: s.stream_url, stream_format: s.stream_format, country_name: country?.name };
   const more = country ? (await searchStations({ pais: country.slug, limite: 5 })).items.filter((x) => x.id !== s.id).slice(0, 4) : [];
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'RadioStation', name: s.name, url: absoluteUrl(`/radios/${s.slug}`),
-    description: s.short_description ?? s.description ?? undefined, image: s.logo_url ?? undefined, sameAs: s.website_url && s.website_is_secure ? [s.website_url] : undefined,
+    description: s.short_description ?? s.description ?? undefined, image: s.logo_url ?? undefined, sameAs: s.website_url && websiteIsCurrent ? [s.website_url] : undefined,
     areaServed: country?.name, inLanguage: s.language,
   };
   return (
@@ -64,7 +66,7 @@ export default async function StationPage({ params }: Props) {
               </p>
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <PlayButton station={playable} size="lg" label /><FavoriteButton station={playable} />
-                {s.website_url && s.website_is_secure && <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Sitio oficial<ExternalLink className="h-4 w-4" aria-hidden /></a>}
+                {s.website_url && websiteIsCurrent && <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Sitio oficial<ExternalLink className="h-4 w-4" aria-hidden /></a>}
               </div>
             </div>
           </div>
