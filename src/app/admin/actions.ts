@@ -44,7 +44,7 @@ export async function saveStation(_p: FormState, fd: FormData): Promise<FormStat
     const { data: previous, error: previousError } = await supabase.from('stations').select('website_url').eq('id', id).maybeSingle();
     if (previousError || !previous) return invalid(fd, {}, 'No se pudo comprobar el sitio web anterior.');
     const websiteChanged = (previous.website_url ?? null) !== (d.website_url ?? null);
-    const { data, error } = await supabase.from('stations').update({ ...row, ...(websiteChanged ? { website_is_secure: false } : {}) }).eq('id', id).select('id');
+    const { data, error } = await supabase.from('stations').update({ ...row, ...(websiteChanged ? { website_is_secure: false, website_verified_at: null } : {}) }).eq('id', id).select('id');
     if (error) return invalid(fd, {}, dbError(error));
     if (!data?.length) return invalid(fd, {}, 'No se encontró la radio o no tienes permiso para editarla.');
   } else {
@@ -93,12 +93,12 @@ export async function stationCommand(id: string, cmd: StationCommand): Promise<C
       let url: URL;
       try { url = new URL(st.website_url as string); } catch { return { ok: false, message: 'La dirección del sitio web no es válida.' }; }
       if (url.protocol !== 'https:' || url.username || url.password) {
-        await update({ website_is_secure: false }, 'No se habilitó el sitio: debe usar HTTPS y no incluir credenciales.');
+        await update({ website_is_secure: false, website_verified_at: null }, 'No se habilitó el sitio: debe usar HTTPS y no incluir credenciales.');
         return { ok: false, message: 'No se habilitó el sitio: debe usar HTTPS y no incluir credenciales.' };
       }
       const result = await verifyStream(url.toString(), { timeoutMs: 8_000 });
       const secure = result.reachable && !result.error && Boolean(result.final_url?.startsWith('https://'));
-      const saved = await update({ website_is_secure: secure }, secure
+      const saved = await update({ website_is_secure: secure, website_verified_at: secure ? new Date().toISOString() : null }, secure
         ? 'Sitio web comprobado: respondió por HTTPS con un certificado válido. El botón ya puede mostrarse.'
         : `Sitio web no habilitado: ${result.error || result.notes[0] || 'no se pudo confirmar una conexión HTTPS válida'}`);
       return { ...saved, ok: saved.ok && secure };
