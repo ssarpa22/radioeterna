@@ -13,10 +13,21 @@ import { SectionHeading } from '@/components/ui';
 type Props = { params: Promise<{ slug: string }> };
 type Rel = { name: string; slug: string } | null;
 
+// PostgREST relation inference can expose a to-one relation as an array when
+// the Supabase client has no generated Database type. Accept either shape.
+function asRel(value: unknown): Rel {
+  const item = Array.isArray(value) ? value[0] : value;
+  if (!item || typeof item !== 'object') return null;
+  const relation = item as Record<string, unknown>;
+  return typeof relation.name === 'string' && typeof relation.slug === 'string'
+    ? { name: relation.name, slug: relation.slug }
+    : null;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const s = await getStationBySlug((await params).slug);
   if (!s) return { title: 'Radio no encontrada', robots: { index: false } };
-  const country = (s.country as Rel)?.name;
+  const country = asRel(s.country)?.name;
   const desc = s.short_description ?? `Escucha ${s.name}${country ? `, radio cristiana de ${country},` : ''} en vivo en Radio Eterna.`;
   return {
     title: `${s.name}${country ? ` · Radio en vivo, ${country}` : ' · Radio en vivo'}`, description: desc,
@@ -28,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StationPage({ params }: Props) {
   const s = await getStationBySlug((await params).slug);
   if (!s) notFound();
-  const country = s.country as Rel; const category = s.category as Rel;
+  const country = asRel(s.country); const category = asRel(s.category);
   const playable = { id: s.id, name: s.name, slug: s.slug, logo_url: s.logo_url, stream_url: s.stream_url, stream_format: s.stream_format, country_name: country?.name };
   const more = country ? (await searchStations({ pais: country.slug, limite: 5 })).items.filter((x) => x.id !== s.id).slice(0, 4) : [];
   const jsonLd = {
