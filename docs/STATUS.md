@@ -6,35 +6,38 @@
 
 | Área | Estado |
 |---|---|
-| CI en GitHub Actions | TypeScript, ESLint, Vitest y build de producción aprobados en `main` |
-| Tests unitarios | 60 tests aprobados en 6 archivos (ejecución registrada en CI) |
-| Playwright smoke | 11 pruebas aprobadas contra `https://radioeterna.vercel.app` |
-| Rutas públicas | Portada, directorio, países, categorías, favoritas, sumar radio, contacto, privacidad y términos responden HTTP 200 |
-| SEO básico | `robots.txt` y `sitemap.xml` responden HTTP 200 |
-| Protección básica del panel | `/admin` redirige al login sin sesión |
-| Supabase / RLS en producción | No auditado de punta a punta |
-| Reproductor y streams reales | No validados sistemáticamente |
-| Carga y rendimiento | No medidos con k6/Lighthouse |
+| CI en GitHub Actions | TypeScript, ESLint, Vitest y build de producción aprobados en ejecuciones recientes de CI en `main`. |
+| Tests unitarios | 60 tests en 6 archivos, según el último registro documentado de CI; confirmar el conteo en ejecuciones posteriores. |
+| Playwright smoke | 11 pruebas aprobadas contra producción en el último registro documentado. Son de solo lectura. |
+| Rutas públicas | Portada, directorio, países, categorías, favoritas, sumar radio, contacto, privacidad y términos respondieron HTTP 200 en la última revisión documentada. |
+| Fichas de radios | El fallo 404 por compatibilidad con la columna `website_is_secure` fue corregido en PR #18 y el usuario confirmó que las fichas vuelven a abrir. |
+| Migración 0007 | El usuario confirmó su ejecución en Supabase SQL Editor y que la consulta de comprobación devolvió la columna esperada. |
+| Verificación de sitios oficiales | Implementada en administración; falta completar una prueba funcional guiada con radios representativas. |
+| Supabase / RLS en producción | No auditado de punta a punta. |
+| Reproductor y streams reales | No validados sistemáticamente. |
+| Carga y rendimiento | No medidos con k6/Lighthouse. |
 
-Los smoke tests de Playwright son de solo lectura: no inician sesión, no envían formularios ni escriben en la base de datos. No equivalen a pruebas funcionales completas.
+Los smoke tests de Playwright no inician sesión, no envían formularios ni escriben en la base de datos. No equivalen a pruebas funcionales completas.
 
 ## Funcionalidad implementada
 
-Directorio, búsqueda, filtros, paginación, fichas, países, categorías, favoritas locales, reproductor persistente con HLS, formulario público de solicitud, panel administrativo, verificador de streams, auditoría por triggers, flujo de revisión/publicación, API pública, SEO técnico y páginas informativas.
+Directorio, búsqueda, filtros, paginación, fichas, países, categorías, favoritas locales, reproductor persistente con HLS, formulario público de solicitudes, panel administrativo, verificación de streams, verificación HTTPS de webs oficiales, auditoría por triggers, flujo de revisión/publicación, importador de radios como borradores, API pública y SEO técnico.
 
 ## Pendientes prioritarios
 
-1. **Dependencias:** el árbol instalado requiere actualización. La versión declarada originalmente de Next.js (15.0.3) es antigua y está afectada por avisos de seguridad posteriores. Actualizar Next.js y React a versiones corregidas, regenerando `package-lock.json` con npm y pasando CI; no editar el lockfile manualmente ni usar `npm audit fix --force`.
-2. **Permisos por columna en Supabase:** aplicar `0006_public_station_columns.sql` solo después de probar en una base local las páginas públicas, `search_stations()`, los conteos y la API. La migración restringe el rol `anon`; no cambia filas ni datos.
-3. **Pruebas RLS:** ejecutar pruebas con Supabase local para anon, authenticated y staff, incluyendo solicitudes, aprobación, rechazo y CRUD.
-4. **E2E funcional:** añadir pruebas aisladas para formularios, login, permisos, flujo de solicitudes y reproducción. No automatizar escrituras contra producción.
-5. **CSP:** diseñar e introducir una Content-Security-Policy en modo report-only primero. Debe contemplar Supabase, Turnstile y orígenes externos de streams.
-6. **Rendimiento:** incorporar Lighthouse y pruebas de carga moderadas en staging, nunca lanzar estrés contra producción.
+1. **Auditoría de dependencias:** volver a ejecutar `npm audit` sobre el lockfile actual y revisar las cadenas transitivas afectadas. No asumir que una alerta antigua sigue vigente ni aplicar `npm audit fix --force`; mantener Next.js 15 y validar cualquier actualización con CI.
+2. **Migración 0006 / permisos públicos:** confirmar su estado real en Supabase y validar en una base local las páginas públicas, `search_stations()`, conteos y API antes de aplicarla en producción si aún estuviera pendiente.
+3. **Historial de migraciones:** algunas modificaciones pueden haberse aplicado desde SQL Editor. Antes de usar `supabase db push`, comparar el historial CLI con el esquema real y reconciliar cualquier migración aplicada manualmente; no repetir SQL a ciegas.
+4. **Pruebas RLS:** ejecutar pruebas con Supabase local para anon, authenticated y staff, incluyendo solicitudes, aprobación, rechazo y CRUD.
+5. **E2E funcional:** añadir pruebas aisladas para formularios, login, permisos, flujo de solicitudes, verificación de sitios oficiales y reproducción. No automatizar escrituras contra producción.
+6. **CSP:** diseñar e introducir una Content-Security-Policy en modo report-only primero. Debe contemplar Supabase, Turnstile y orígenes externos de streams.
+7. **Rendimiento:** incorporar Lighthouse y pruebas de carga moderadas en staging, nunca lanzar estrés contra producción.
+8. **Reverificación de sitios oficiales:** hoy la marca de seguridad no tiene vencimiento automático. Diseñar una expiración y reverificación programada antes de confiar indefinidamente en una comprobación antigua.
 
 ## Configuración externa y operación
 
-Requiere Supabase y migraciones aplicadas, primer administrador, variables de entorno, Upstash para rate limiting distribuido, Turnstile, dominio/DNS y correo de contacto. No publicar claves service-role en cliente ni en repositorio.
+La aplicación requiere Supabase, variables de entorno y un primer administrador. En producción, Turnstile debe tener configuradas `NEXT_PUBLIC_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` para habilitar el formulario público. Upstash permite rate limiting distribuido; sin él, el límite por memoria no se comparte entre instancias.
 
 ## Limitaciones conocidas
 
-Sin subida de logos, gestión de administradores desde interfaz, correos transaccionales, reverificación automática, favoritas sincronizadas ni metadatos de reproducción. Streams HTTP pueden ser bloqueados desde sitios HTTPS y HLS depende de CORS de cada emisora. Las páginas legales son borradores y requieren revisión profesional.
+Sin subida de logos, gestión de administradores desde interfaz, correos transaccionales, reverificación automática, favoritas sincronizadas ni metadatos de reproducción. Streams HTTP pueden ser bloqueados desde sitios HTTPS y HLS depende de CORS de cada emisora. La verificación HTTPS confirma el transporte y el certificado en el momento de la comprobación, no la seguridad del contenido. Las páginas legales son borradores y requieren revisión profesional.
