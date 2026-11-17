@@ -20,13 +20,13 @@ type Station = {
 function authorized(request: Request): boolean {
   const secret = process.env.WEBSITE_MONITOR_SECRET;
   const supplied = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  if (!secret || !supplied) return false;
+  if (!secret || secret.length < 32 || !supplied) return false;
   const expectedBuffer = Buffer.from(secret);
   const suppliedBuffer = Buffer.from(supplied);
   return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
 }
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
