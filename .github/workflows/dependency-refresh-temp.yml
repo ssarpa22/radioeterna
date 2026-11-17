@@ -1,4 +1,5 @@
 name: Dependency refresh (temporary)
+# Regenerate the npm lockfile in CI and validate the resulting dependency tree.
 
 on:
   push:
