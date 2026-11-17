@@ -1,51 +1,88 @@
 # Despliegue de Radio Eterna
 
-> Nada de esto se ha ejecutado todavía: son los pasos previstos. **No compres ni contrates nada sin decidirlo tú.**
+Esta guía describe el despliegue actual y las tareas que todavía requieren configuración. No compres ni contrates servicios sin evaluar antes el costo y la necesidad.
 
-## Arquitectura y quién hace qué
-| Función | Servicio sugerido | Notas |
+## Arquitectura
+
+| Función | Servicio | Notas |
 |---|---|---|
-| Aplicación (Next.js) | Vercel | El hosting compartido tradicional **no** sirve: Next necesita runtime Node. |
-| Base de datos, Auth, Storage | Supabase | Postgres + RLS. |
-| Registro del dominio | Registrador a elección | Solo registra el nombre. |
-| DNS | Registrador o Vercel | Apunta el dominio a Vercel. |
-| SSL/HTTPS | Vercel (automático) | Certificado gestionado por Vercel. |
-| Anti-spam / límites | Cloudflare Turnstile, Upstash Redis | Opcionales, tienen capa gratuita. |
-| Correo | **No implementado** | No hay notificaciones por correo todavía. |
-
-## Costos (consultados en noviembre de 2026; confirma en las páginas oficiales antes de contratar)
-| Servicio | Plan | Costo | Lo que importa |
-|---|---|---|---|
-| Supabase | Free | 0 USD | 500 MB de base de datos, 1 GB de archivos, ~5 GB de transferencia; **el proyecto se pausa tras 1 semana sin actividad** y **no incluye backups automáticos**. |
-| Supabase | Pro | desde 25 USD/mes | Sin pausa; backups diarios con 7 días de retención (recuperación a un punto en el tiempo es un extra de pago). |
-| Vercel | Hobby | 0 USD | **Solo uso personal y no comercial.** Un sitio de negocio no cumple. |
-| Vercel | Pro | 20 USD/mes por usuario | Permite uso comercial. |
-| Dominio radioeterna.com | — | ~10–15 USD/año (estimación, no verificada) | Renovación anual. |
-| Turnstile / Upstash | Gratis | 0 USD | Capas gratuitas, no verificadas en esta revisión. |
-
-Escenarios: **desarrollo** = 0 USD (Supabase local + Hobby para pruebas personales). **Lanzamiento mínimo** ≈ 20 USD/mes (Vercel Pro) + dominio, con Supabase Free y backups manuales. **Recomendado con tráfico real** ≈ 45 USD/mes (Vercel Pro + Supabase Pro) + dominio. El audio no pesa en tu factura: lo sirve cada radio.
+| Aplicación | Vercel | Next.js necesita runtime Node |
+| Base de datos y Auth | Supabase | PostgreSQL + RLS |
+| Dominio y DNS | Registrador / Vercel | Configurar según los valores que indique Vercel |
+| HTTPS | Vercel | Certificado gestionado por Vercel |
+| Anti-spam | Cloudflare Turnstile | En producción requiere site key y secret key |
+| Rate limiting distribuido | Upstash Redis | Opcional; sin backend distribuido el límite puede ser por instancia |
+| Correo transaccional | No implementado | No hay notificaciones por correo |
 
 ## Entornos
-Desarrollo: Supabase local (`supabase start`). Staging: un segundo proyecto de Supabase + el entorno *Preview* de Vercel. Producción: proyecto Supabase propio + entorno *Production*. **Nunca** compartas claves entre entornos.
 
-## Pasos
-1. **Dominio.** Regístralo (tú decides dónde). 
-2. **DNS.** En Vercel: Project → Settings → Domains → agrega `radioeterna.com` y `www`. Vercel muestra los registros exactos (A/CNAME) que debes crear en tu DNS; usa **esos** valores, no otros. Propaga en minutos u horas.
-3. **HTTPS.** Vercel emite y renueva el certificado solo cuando el DNS apunta bien. Verifica el candado en el navegador.
-4. **Proyecto Supabase.** Crea el proyecto (elige región cercana a tus oyentes, guarda la contraseña de la base). En Authentication → URL Configuration: *Site URL* = `https://radioeterna.com`; agrega la URL de staging si tienes. En Providers → Email: **desactiva «Allow new users to sign up»**.
-5. **Variables de entorno** (Vercel → Settings → Environment Variables, por entorno): `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; opcionales `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`. **`SUPABASE_SERVICE_ROLE_KEY` no es necesaria** (la app no la usa): no la cargues. Antes de lanzar, define Upstash y Turnstile.
-6. **Migraciones.** Con Supabase CLI: `supabase login`, `supabase link --project-ref <ref>`, `supabase db push` (aplica `0001`–`0005`). **No ejecutes `seed.sql` en producción** (son datos DEMO). Comprueba en SQL: `select value from site_settings where key='allow_demo_data';` → `false`.
-7. **Primer administrador.** Sigue `docs/ADMIN-SETUP.md`.
-8. **Despliegue.** Sube el repositorio a GitHub, impórtalo en Vercel (framework Next.js, sin cambiar comandos) y despliega. 
-9. **Prueba en producción** (lista abajo).
-10. **Actualizar.** `git push` a la rama principal despliega automáticamente. Si hay migraciones nuevas: primero pruébalas en staging, luego `supabase db push` en producción (haz un backup antes).
+- **Local:** Supabase local con `supabase start`.
+- **Preview/staging:** idealmente un proyecto Supabase separado y el entorno Preview de Vercel.
+- **Producción:** proyecto Supabase de producción y entorno Production de Vercel.
 
-### Lista de pruebas en producción
-- Portada, `/radios`, `/paises`, `/categorias` cargan; `/sitemap.xml` y `/robots.txt` responden.
-- No aparece ninguna radio «DEMO».
-- Inicia sesión en `/admin/login`; crea una radio, verifícala, publícala y ábrela en el sitio público.
-- Pulsa «Escuchar» con una radio real **que tengas autorización para usar**; navega a otra página y confirma que el audio sigue.
-- Envía una solicitud en `/sumar-radio`, ábrela en `/admin/solicitudes` y apruébala (queda en borrador).
-- Prueba el reproductor con una radio `http://` y con una `https://`.
-- Configura el correo en `/admin/configuracion` (lo usa `/contacto`).
-- Revisa `/privacidad` y `/terminos` con un profesional legal y retira el aviso de «borrador».
+No compartas credenciales entre entornos.
+
+## Variables de entorno
+
+En Vercel → Settings → Environment Variables, configurar según el entorno:
+
+- `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- `TURNSTILE_SECRET_KEY`
+
+Opcionales:
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+En producción, ambas variables de Turnstile son necesarias para habilitar los envíos públicos. Si falta alguna, el formulario rechaza el envío de forma segura. No configures `SUPABASE_SERVICE_ROLE_KEY`: la aplicación no la necesita.
+
+## Base de datos y migraciones
+
+Las migraciones SQL versionadas se encuentran en `supabase/migrations/`. La serie actual llega a `0007_official_website_security.sql`.
+
+La migración 0007 agrega `stations.website_is_secure`, que permite ocultar los sitios oficiales hasta que se compruebe su HTTPS. En el proyecto de producción actual, el usuario confirmó haber agregado esa columna mediante SQL Editor.
+
+**Antes de aplicar migraciones en una base existente:**
+
+1. Hacé un backup.
+2. Revisá el historial de migraciones de esa base.
+3. Aplicá solo las migraciones que realmente falten, en orden.
+4. No ejecutes de nuevo scripts manuales ni uses `supabase db push` sin comprobar primero el estado y el vínculo del proyecto.
+5. Nunca ejecutes `supabase/seed.sql` en producción: contiene datos DEMO.
+
+En una base local nueva, seguí el flujo de Supabase CLI documentado por el proyecto y comprobá que todas las migraciones se apliquen correctamente. Verificá también que `site_settings.allow_demo_data` esté en `false` en producción.
+
+## Primer administrador
+
+Seguí [ADMIN-SETUP.md](ADMIN-SETUP.md). No habilites registros públicos de usuarios si no forman parte del modelo operativo del sitio.
+
+## Despliegue en Vercel
+
+1. Importá el repositorio GitHub en Vercel.
+2. Confirmá que el framework detectado sea Next.js y mantené los comandos por defecto.
+3. Cargá las variables de entorno correspondientes al proyecto.
+4. Desplegá y revisá los logs de build y runtime.
+5. Después del despliegue, ejecutá la lista de comprobaciones de abajo.
+
+Los cambios fusionados a la rama principal disparan el despliegue automático si la integración Git de Vercel está activa.
+
+## Comprobaciones de producción
+
+- La portada, `/radios`, `/paises` y `/categorias` cargan.
+- `/sitemap.xml` y `/robots.txt` responden correctamente.
+- No aparecen emisoras DEMO.
+- `/admin` redirige al login sin sesión.
+- Con una cuenta autorizada, revisar el panel y crear/probar contenido solo con datos controlados.
+- Probar reproducción con una emisora cuyo uso esté autorizado y confirmar que el audio persiste al navegar.
+- Verificar una URL oficial HTTPS válida desde el panel y comprobar que aparece en la ficha pública.
+- Verificar que una URL HTTP o con certificado inválido no se expone como sitio oficial.
+- Cambiar la URL oficial y confirmar que la verificación anterior se invalida.
+- Confirmar que el formulario público funciona solo cuando Turnstile está configurado correctamente.
+- Revisar `/privacidad` y `/terminos` con un profesional legal; siguen siendo borradores.
+
+## Actualizaciones y mantenimiento
+
+Antes de cambios de esquema: backup, prueba en staging/local y revisión de las migraciones pendientes. Para el mantenimiento recurrente, ver [MAINTENANCE.md](MAINTENANCE.md).
+
