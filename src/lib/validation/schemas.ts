@@ -22,7 +22,7 @@ export const submissionSchema = z.object({
   primary_category_id: z.string().uuid('Selecciona una categoría'),
   description: z.string().trim().min(10, 'Describe brevemente la radio').max(2000),
   logo_url: httpUrl.optional().or(z.literal('').transform(() => undefined)),
-  authorized_confirmed: z.literal(true, { errorMap: () => ({ message: 'Debes confirmar que estás autorizado' }) }),
+  authorized_confirmed: z.literal(true, { error: 'Debes confirmar que estás autorizado' }),
   website: z.string().max(0).optional(), // honeypot: must stay empty
 });
 export type SubmissionInput = z.infer<typeof submissionSchema>;
