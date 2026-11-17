@@ -117,7 +117,7 @@ async function fetchOneQuery(countryCode: string, tag: string): Promise<RadioBro
   for (const mirror of MIRRORS) {
     try {
       const response = await fetch(`${mirror}/json/stations/search?${params}`, {
-        headers: { 'User-Agent': 'RadioEternaImporter/2.0 (https://radioeterna.com)' },
+        headers: { 'User-Agent': 'RadioEternaImporter/2.0' },
         signal: AbortSignal.timeout(12_000),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
