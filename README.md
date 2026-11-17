@@ -93,7 +93,7 @@ La guía de despliegue está en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) y las t
 
 ## Limitaciones conocidas
 
-- La verificación HTTPS confirma la conexión en el momento de la prueba; no garantiza el contenido del sitio ni realiza reverificación automática.
+- La verificación HTTPS vence a los 30 días; no garantiza el contenido del sitio ni realiza reverificación automática.
 - No hay backups, monitoreo ni alertas configurados automáticamente.
 - Los streams pueden dejar de funcionar; HLS depende también de la configuración CORS de cada emisora.
 - Las páginas legales son borradores pendientes de revisión profesional.
