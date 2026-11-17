@@ -80,7 +80,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {results.map((station) => (
               <li key={station.stationUuid} className="flex items-start gap-3 p-4">
-                <input type="checkbox" aria-label={`Seleccionar ${station.name}`} checked={selected.includes(station.stationUuid)} disabled={pending || (!selected.includes(station.stationUuid) && selected.length >= 15)} onChange={() => toggle(station.stationUuid)} className="mt-1 h-5 w-5 shrink-0 accent-[#12284B]" />
+                <input type="checkbox" aria-label={`Seleccionar ${station.name}`} checked={selected.includes(station.stationUuid)} disabled={pending || (!selected.includes(station.stationUuid) && selected.length >= 5)} onChange={() => toggle(station.stationUuid)} className="mt-1 h-5 w-5 shrink-0 accent-[#12284B]" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{station.name}</p>
                   <p className="mt-0.5 text-xs text-ink/60">{station.countryCode} · {station.language.toUpperCase()} · {station.votes} votos</p>
@@ -96,6 +96,10 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
             ))}
           </ul>
         </section>
+      )}
+
+      {results.length === 0 && !pending && message.startsWith('Se encontraron') && (
+        <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink/65">No hay resultados que cumplan los filtros. Probá con otra frase o país.</p>
       )}
 
       {imported.length > 0 && (
