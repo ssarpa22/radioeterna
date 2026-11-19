@@ -19,7 +19,7 @@ type Station = {
 
 function authorized(request: Request): boolean {
   const secret = process.env.WEBSITE_MONITOR_SECRET;
-  const supplied = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const supplied = request.headers.get('authorization')?.replace(/^Bearer\\s+/i, '');
   if (!secret || secret.length < 32 || !supplied) return false;
   const expectedBuffer = Buffer.from(secret);
   const suppliedBuffer = Buffer.from(supplied);
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   }
 
   const stations = (data ?? []) as Station[];
-  const issues: Array<{ station: string; outcome: string; detail: string }> = [];
+  const issues: Array<{ station: string; outcome: string; detail: string; error_code: string | null }> = [];
   let verified = 0;
 
   await Promise.all(stations.map(async (station) => {
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
 
     let outcome: string | null = null;
     let detail = '';
+    let errorCode: string | null = null;
     let finalUrl: string | null = null;
     let httpStatus: number | null = null;
     let durationMs = 0;
@@ -96,8 +97,9 @@ export async function POST(request: Request) {
       finalUrl = result.final_url;
       httpStatus = result.http_status;
       durationMs = result.duration_ms;
+      errorCode = result.error_code;
 
-      const certificateInvalid = /certificado SSL/i.test(result.error ?? '');
+      const certificateInvalid = Boolean(result.error_code);
       const downgradedToHttp = result.final_url?.startsWith('http://') === true || result.notes.some((note) => /redirección baja de https a http/i.test(note));
 
       if (certificateInvalid) {
@@ -137,13 +139,14 @@ export async function POST(request: Request) {
         station_name: station.name,
         outcome,
         detail,
+        error_code: errorCode,
         http_status: httpStatus,
         final_url: finalUrl,
         duration_ms: durationMs,
       });
       if (logError) throw new Error(`No se pudo registrar el evento de ${station.id}: ${logError.message}`);
-      issues.push({ station: station.name, outcome, detail });
-      console.warn('[website-monitor]', station.name, outcome, detail);
+      issues.push({ station: station.name, outcome, detail, error_code: errorCode });
+      console.warn('[website-monitor]', station.name, outcome, { detail, errorCode });
     }
   }));
 
