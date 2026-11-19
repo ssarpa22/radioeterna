@@ -28,6 +28,16 @@ function authorized(request: Request): boolean {
 
 export async function POST(request: Request) {
   if (!authorized(request)) {
+    const secret = process.env.WEBSITE_MONITOR_SECRET;
+    const authorization = request.headers.get('authorization');
+    const supplied = authorization?.replace(/^Bearer\\s+/i, '');
+    console.warn('[website-monitor] Authentication rejected:', {
+      serverSecretConfigured: Boolean(secret),
+      serverSecretLengthValid: Boolean(secret && secret.length >= 32),
+      authorizationHeaderPresent: Boolean(authorization),
+      bearerTokenPresent: Boolean(supplied),
+      tokenMatches: Boolean(secret && secret.length >= 32 && supplied && Buffer.byteLength(secret) === Buffer.byteLength(supplied) && timingSafeEqual(Buffer.from(secret), Buffer.from(supplied))),
+    });
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
