@@ -11,12 +11,27 @@ export type VerifyResult = {
   audio_detected: boolean;       // the first bytes look like real audio/HLS (not just a header claim)
   detected_format: DetectedFormat | null;
   http_status: number | null; content_type: string | null; final_url: string | null; redirects: number;
-  duration_ms: number; checked_at: string; error: string | null; notes: string[];
+  duration_ms: number; checked_at: string; error: string | null; error_code: string | null; notes: string[];
 };
 export type VerifyOptions = { timeoutMs?: number; isAllowedIp?: (ip: string) => boolean };
 
 const MAX_REDIRECTS = 5, MAX_BYTES = 32 * 1024, SAMPLE_BYTES = 8 * 1024, READ_WINDOW_MS = 3000, MAX_CONCURRENT = 3, MAX_QUEUE = 20;
 class VerifyError extends Error { constructor(public userMessage: string) { super(userMessage); } }
+
+// Keep certificate diagnostics structured and safe: store the Node error code, never a raw TLS stack.
+export function getCertificateErrorCode(error: unknown): string | null {
+  const code = (error as NodeJS.ErrnoException | null)?.code ?? '';
+  return /CERT|TLS|SSL|DEPTH_ZERO|UNABLE_TO_VERIFY|SELF_SIGNED/i.test(code) ? code : null;
+}
+
+function certificateErrorMessage(code: string): string {
+  if (code === 'ERR_TLS_CERT_ALTNAME_INVALID') return 'El certificado HTTPS no coincide con el nombre del dominio.';
+  if (code === 'CERT_HAS_EXPIRED') return 'El certificado HTTPS está vencido.';
+  if (code === 'CERT_NOT_YET_VALID') return 'El certificado HTTPS todavía no es válido.';
+  if (code === 'DEPTH_ZERO_SELF_SIGNED_CERT' || code === 'SELF_SIGNED_CERT_IN_CHAIN') return 'El servidor utiliza un certificado autofirmado.';
+  if (/UNABLE_TO_VERIFY_LEAF_SIGNATURE|UNABLE_TO_GET_ISSUER_CERT/i.test(code)) return 'No se pudo validar la cadena de certificados HTTPS.';
+  return 'El certificado SSL de la radio no es válido.';
+}
 
 // ---- concurrency limiter (per server instance) ----
 let active = 0; const waiters: (() => void)[] = [];
@@ -95,7 +110,8 @@ const explain = (e: unknown): string => {
   if (c === 'ECONNREFUSED') return 'El servidor rechazó la conexión.';
   if (c === 'ETIMEDOUT' || (e as Error)?.message === 'timeout') return 'El servidor no respondió a tiempo.';
   if (c === 'ECONNRESET') return 'La conexión se interrumpió.';
-  if (/CERT|TLS|SSL|DEPTH_ZERO|UNABLE_TO_VERIFY|SELF_SIGNED/i.test(c)) return 'El certificado SSL de la radio no es válido.';
+  const certificateCode = getCertificateErrorCode(e);
+  if (certificateCode) return certificateErrorMessage(certificateCode);
   if (c.startsWith('HPE_')) return 'Respuesta no estándar (posible servidor SHOUTcast antiguo). Verifica manualmente.';
   return 'No se pudo conectar con el servidor.';
 };
@@ -104,7 +120,7 @@ const explain = (e: unknown): string => {
 export async function verifyStream(input: string, opts: VerifyOptions = {}): Promise<VerifyResult> {
   const started = Date.now(); const allowed = opts.isAllowedIp ?? isPublicIp; const total = opts.timeoutMs ?? 10_000;
   const r: VerifyResult = { reachable: false, audio_detected: false, detected_format: null, http_status: null, content_type: null,
-    final_url: null, redirects: 0, duration_ms: 0, checked_at: new Date().toISOString(), error: null, notes: [] };
+    final_url: null, redirects: 0, duration_ms: 0, checked_at: new Date().toISOString(), error: null, error_code: null, notes: [] };
   try {
     await acquire();
   } catch (e) { r.error = explain(e); return r; }
@@ -137,7 +153,7 @@ export async function verifyStream(input: string, opts: VerifyOptions = {}): Pro
       }
       break;
     }
-  } catch (e) { r.error = explain(e); } finally { release(); }
+  } catch (e) { r.error = explain(e); r.error_code = getCertificateErrorCode(e); } finally { release(); }
   r.duration_ms = Date.now() - started; r.checked_at = new Date().toISOString();
   return r;
 }

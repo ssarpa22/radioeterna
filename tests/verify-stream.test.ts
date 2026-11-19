@@ -1,7 +1,7 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { detectAudio, verifyStream } from '@/lib/security/verify-stream';
+import { detectAudio, getCertificateErrorCode, verifyStream } from '@/lib/security/verify-stream';
 
 let server: http.Server; let base = '';
 const mp3 = Buffer.concat([Buffer.from([0xff, 0xfb, 0x90, 0x00]), Buffer.alloc(9000)]);
@@ -37,6 +37,18 @@ describe('verification logic', () => {
   it('times out a silent server', async () => { const r = await verifyStream(`${base}/hang`, { ...any, timeoutMs: 800 }); expect(r.audio_detected).toBe(false); expect(r.duration_ms).toBeLessThan(5000); });
   it('re-validates redirect targets (public → private is blocked)', async () => {
     const r = await verifyStream(`${base}/redir`, { isAllowedIp: (ip) => ip !== '127.0.0.1' }); expect(r.reachable).toBe(false);
+  });
+});
+describe('certificate diagnostics', () => {
+  it.each([
+    ['ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_TLS_CERT_ALTNAME_INVALID'],
+    ['CERT_HAS_EXPIRED', 'CERT_HAS_EXPIRED'],
+    ['DEPTH_ZERO_SELF_SIGNED_CERT', 'DEPTH_ZERO_SELF_SIGNED_CERT'],
+  ])('preserves the safe error code %s', (code, expected) => {
+    expect(getCertificateErrorCode(Object.assign(new Error('TLS details are not logged'), { code }))).toBe(expected);
+  });
+  it('does not classify ordinary network errors as certificate failures', () => {
+    expect(getCertificateErrorCode(Object.assign(new Error('connection reset'), { code: 'ECONNRESET' }))).toBeNull();
   });
 });
 describe('detectAudio', () => {
