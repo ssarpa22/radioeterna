@@ -177,7 +177,7 @@ export async function importRadioCandidates(uuids: string[]): Promise<ActionResu
     if (!(await rateLimit(`radio-import-save:${staff.id}`, 5, 60))) {
       return { ok: false, message: 'Hiciste muchas importaciones seguidas. Esperá un minuto.' };
     }
-    const selected = [...new Set(uuids)].slice(0, 5);
+    const selected = [...new Set(uuids)].slice(0, 20);
     if (!selected.length || selected.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) {
       return { ok: false, message: 'La selección no es válida.' };
     }
@@ -192,48 +192,47 @@ export async function importRadioCandidates(uuids: string[]): Promise<ActionResu
     const imported: { id: string; name: string }[] = [];
     const skipped: { name: string; reason: string }[] = [];
 
-    for (const uuid of selected) {
+    // Process five stations at a time: stream verification is the slowest step,
+    // and bounded concurrency cuts waiting time without flooding Radio Browser or Supabase.
+    for (let offset = 0; offset < selected.length; offset += 5) {
+      await Promise.all(selected.slice(offset, offset + 5).map(async (uuid) => {
       const source = await radioBrowserByUuid(uuid);
       const candidate = source ? toCandidate(source, (source.countrycode ?? '').toUpperCase()) : null;
       const label = candidate?.name ?? uuid;
       if (!candidate) {
         skipped.push({ name: label, reason: 'Radio Browser ya no devuelve una emisora válida.' });
-        continue;
+        return;
       }
       const country = countryByCode.get(candidate.countryCode);
       if (!country) {
         skipped.push({ name: label, reason: 'El país no está habilitado en Radio Eterna.' });
-        continue;
+        return;
       }
 
       const { data: duplicateByStream } = await supabase.from('stations').select('id').eq('stream_url', candidate.streamUrl).is('deleted_at', null).limit(1).maybeSingle();
       const { data: duplicateByName } = duplicateByStream ? { data: null } : await supabase.from('stations').select('id').eq('country_id', country.id).ilike('name', candidate.name).is('deleted_at', null).limit(1).maybeSingle();
       if (duplicateByStream || duplicateByName) {
         skipped.push({ name: label, reason: 'Ya existe una radio con ese stream o nombre en ese país.' });
-        continue;
+        return;
       }
 
       const verification = await verifyStream(candidate.streamUrl, { timeoutMs: 8_000 });
       const finalUrl = verification.final_url;
       if (!verification.reachable || !verification.audio_detected || !finalUrl?.startsWith('https://')) {
         skipped.push({ name: label, reason: verification.error || verification.notes[0] || 'No se pudo confirmar audio HTTPS.' });
-        continue;
+        return;
       }
 
       const categorySlug = mapCategorySlug(candidate.tags);
       const category = categoryBySlug.get(categorySlug) ?? categoryBySlug.get('radiodifusion-cristiana-general');
       if (!category) {
         skipped.push({ name: label, reason: 'No hay una categoría activa disponible.' });
-        continue;
+        return;
       }
 
-      const baseSlug = `${slugify(candidate.name) || 'radio'}-${candidate.countryCode.toLowerCase()}`.slice(0, 75).replace(/-+$/, '');
-      let slug = baseSlug;
-      for (let suffix = 2; ; suffix++) {
-        const { data: existing } = await supabase.from('stations').select('id').eq('slug', slug).limit(1).maybeSingle();
-        if (!existing) break;
-        slug = `${baseSlug}-${suffix}`;
-      }
+      const baseSlug = `${slugify(candidate.name) || 'radio'}-${candidate.countryCode.toLowerCase()}`.slice(0, 68).replace(/-+$/, '');
+      // A short Radio Browser UUID suffix prevents collisions between same-name stations in parallel batches.
+      const slug = `${baseSlug}-${candidate.stationUuid.replace(/-/g, '').slice(0, 6)}`;
 
       const { data: created, error } = await supabase.from('stations').insert({
         content_type: 'radio',
@@ -258,9 +257,11 @@ export async function importRadioCandidates(uuids: string[]): Promise<ActionResu
 
       if (error || !created) {
         skipped.push({ name: label, reason: 'No se pudo guardar en la base de datos. No se publicó.' });
-        continue;
+        return;
       }
       imported.push({ id: created.id, name: candidate.name });
+
+      }));
     }
 
     return {

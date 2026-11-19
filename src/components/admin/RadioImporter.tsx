@@ -29,7 +29,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
   };
 
   const toggle = (uuid: string) => {
-    setSelected((current) => current.includes(uuid) ? current.filter((id) => id !== uuid) : current.length < 5 ? [...current, uuid] : current);
+    setSelected((current) => current.includes(uuid) ? current.filter((id) => id !== uuid) : current.length < 20 ? [...current, uuid] : current);
   };
 
   const importSelected = () => {
@@ -72,15 +72,15 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
       {results.length > 0 && (
         <section className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 className="text-xl">Emisoras encontradas</h2><p className="text-sm text-ink/65">Seleccioná hasta 5 por importación.</p></div>
+            <div><h2 className="text-xl">Emisoras encontradas</h2><p className="text-sm text-ink/65">Seleccioná hasta 20 por importación.</p><button type="button" onClick={() => setSelected(results.slice(0, 20).map((station) => station.stationUuid))} disabled={pending || results.length === 0} className="mt-2 text-sm font-semibold text-sky underline">Seleccionar primeras 20</button></div>
             <button type="button" onClick={importSelected} disabled={pending || selected.length === 0} className="btn btn-primary">
-              {pending ? 'Procesando…' : `Importar seleccionadas (${selected.length}/5)`}
+              {pending ? 'Procesando…' : `Importar seleccionadas (${selected.length}/20)`}
             </button>
           </div>
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {results.map((station) => (
               <li key={station.stationUuid} className="flex items-start gap-3 p-4">
-                <input type="checkbox" aria-label={`Seleccionar ${station.name}`} checked={selected.includes(station.stationUuid)} disabled={pending || (!selected.includes(station.stationUuid) && selected.length >= 5)} onChange={() => toggle(station.stationUuid)} className="mt-1 h-5 w-5 shrink-0 accent-[#12284B]" />
+                <input type="checkbox" aria-label={`Seleccionar ${station.name}`} checked={selected.includes(station.stationUuid)} disabled={pending || (!selected.includes(station.stationUuid) && selected.length >= 20)} onChange={() => toggle(station.stationUuid)} className="mt-1 h-5 w-5 shrink-0 accent-[#12284B]" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{station.name}</p>
                   <p className="mt-0.5 text-xs text-ink/60">{station.countryCode} · {station.language.toUpperCase()} · {station.votes} votos</p>

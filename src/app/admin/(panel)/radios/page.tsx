@@ -7,6 +7,7 @@ import { isWebsiteVerificationCurrent } from '@/lib/security/website-verificatio
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
 import { PlayButton } from '@/components/player/PlayButton';
+import { BulkPublishStations } from '@/components/admin/BulkPublishStations';
 
 export const metadata: Metadata = { title: 'Radios' };
 const SIZE = 25; type SP = Promise<{ q?: string; estado?: string; orden?: string; pagina?: string }>;
@@ -34,6 +35,7 @@ export default async function AdminStations({ searchParams }: { searchParams: SP
           <Link href="/admin/radios/nueva" className="btn btn-primary">Nueva radio</Link>
         </div>
         {error && <p role="alert" className="mb-4 text-danger">No se pudo cargar la lista.</p>}
+        <BulkPublishStations stations={(data ?? []).filter((station) => station.status === 'draft' && (station.verification_status === 'verified' || station.verification_status === 'manual')).map(({ id, name }) => ({ id, name }))} />
         {(data ?? []).length === 0 ? <EmptyState title="No hay radios con estos filtros" action={<Link href="/admin/radios/nueva" className="btn btn-primary">Crear una radio</Link>} /> :
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{(data ?? []).map((s) => {
             const countryName = (s.country as unknown as { name: string } | null)?.name;
