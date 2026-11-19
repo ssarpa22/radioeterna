@@ -122,12 +122,16 @@ function mapLanguage(raw: string | undefined): string {
 }
 
 function toCandidate(station: RadioBrowserStation, expectedCountry: string): RadioCandidate | null {
-  const name = (station.name ?? '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 120);
+  const name = (station.name ?? '').replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim().slice(0, 120);
   const streamUrl = (station.url_resolved || station.url || '').trim();
-  const signal = normalize(`${name} ${station.tags ?? ''}`);
+  const tags = (station.tags ?? '').slice(0, 500);
+  const signal = normalize(`${name} ${tags}`);
+  const hasChristianSignal = CHRISTIAN_SIGNAL.test(signal);
+  const hasFamilySignal = FAMILY_SIGNAL.test(signal);
+  const christianTags = tags.split(',').map((tag) => tag.trim()).filter((tag) => tag && CHRISTIAN_SIGNAL.test(normalize(tag))).slice(0, 8);
   if (!station.stationuuid || !name || name.length < 2) return null;
   if ((station.countrycode ?? '').toUpperCase() !== expectedCountry || station.lastcheckok !== 1) return null;
-  if (!CHRISTIAN_OR_FAMILY_SIGNAL.test(signal) || !streamUrl.startsWith('https://') || streamUrl.length > 2048 || /\s/.test(streamUrl)) return null;
+  if ((!hasChristianSignal && !hasFamilySignal) || !streamUrl.startsWith('https://') || streamUrl.length > 2048 || /\\s/.test(streamUrl)) return null;
   try {
     const parsed = new URL(streamUrl);
     if (parsed.username || parsed.password) return null;
@@ -143,15 +147,14 @@ function toCandidate(station: RadioBrowserStation, expectedCountry: string): Rad
     language: mapLanguage(station.language),
     tags,
     streamUrl,
-    websiteUrl: /^https:\/\//i.test(website) ? website.slice(0, 2048) : null,
-    logoUrl: /^https:\/\//i.test(favicon) ? favicon.slice(0, 2048) : null,
+    websiteUrl: /^https:\\/\\//i.test(website) ? website.slice(0, 2048) : null,
+    logoUrl: /^https:\\/\\//i.test(favicon) ? favicon.slice(0, 2048) : null,
     votes: Number.isFinite(station.votes) ? Number(station.votes) : 0,
     hasChristianSignal,
     hasFamilySignal,
     christianTags,
   };
 }
-
 export async function searchRadioCandidates(countryCode: string, rawTerm: string): Promise<ActionResult<RadioCandidate[]>> {
   try {
     const staff = await requireSuperAdmin();
