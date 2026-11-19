@@ -125,7 +125,7 @@ function toCandidate(station: RadioBrowserStation, expectedCountry: string): Rad
   const name = (station.name ?? '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 120);
   const streamUrl = (station.url_resolved || station.url || '').trim();
   const tags = (station.tags ?? '').slice(0, 500);
-  const signal = normalize(\`\${name} \${tags}\`);
+  const signal = normalize(`${name} ${tags}`);
   const hasChristianSignal = CHRISTIAN_SIGNAL.test(signal);
   const hasFamilySignal = FAMILY_SIGNAL.test(signal);
   const christianTags = tags.split(',').map((tag) => tag.trim()).filter((tag) => tag && CHRISTIAN_SIGNAL.test(normalize(tag))).slice(0, 8);
