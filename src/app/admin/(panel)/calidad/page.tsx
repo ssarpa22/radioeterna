@@ -19,14 +19,6 @@ type Params = { q?: string; problema?: string; estado?: string; pagina?: string 
 const validIssue = (value?: string): Issue | undefined => value && value in ISSUES ? value as Issue : undefined;
 const validStatus = (value?: string) => value && Object.hasOwn(STATUS_LABEL, value) ? value : undefined;
 
-function applyIssue<T extends ReturnType<ReturnType<typeof createClient>['from']>>(query: T, issue?: Issue): T {
-  if (issue === 'logo') return query.is('logo_url', null) as T;
-  if (issue === 'descripcion') return query.or('short_description.is.null,description.is.null') as T;
-  if (issue === 'ciudad') return query.is('city', null) as T;
-  if (issue === 'sitio') return query.is('website_url', null) as T;
-  return query;
-}
-
 export default async function CatalogQuality({ searchParams }: { searchParams: Promise<Params> }) {
   await requireStaff();
   const sp = await searchParams;
@@ -42,10 +34,14 @@ export default async function CatalogQuality({ searchParams }: { searchParams: P
     if (q) query = query.ilike('name', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
     return query;
   };
-  const countFor = async (kind?: Issue) => {
-    const result = await applyIssue(base(), kind);
-    return result;
+  const applyIssue = (query: ReturnType<typeof base>, kind?: Issue) => {
+    if (kind === 'logo') return query.is('logo_url', null);
+    if (kind === 'descripcion') return query.or('short_description.is.null,description.is.null');
+    if (kind === 'ciudad') return query.is('city', null);
+    if (kind === 'sitio') return query.is('website_url', null);
+    return query;
   };
+  const countFor = async (kind?: Issue) => await applyIssue(base(), kind);
   const [allResult, logoResult, descriptionResult, cityResult, websiteResult] = await Promise.all([
     base(), countFor('logo'), countFor('descripcion'), countFor('ciudad'), countFor('sitio'),
   ]);
@@ -62,7 +58,10 @@ export default async function CatalogQuality({ searchParams }: { searchParams: P
     .is('deleted_at', null);
   if (status) listQuery = listQuery.eq('status', status);
   if (q) listQuery = listQuery.ilike('name', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
-  listQuery = applyIssue(listQuery, issue);
+  if (issue === 'logo') listQuery = listQuery.is('logo_url', null);
+  if (issue === 'descripcion') listQuery = listQuery.or('short_description.is.null,description.is.null');
+  if (issue === 'ciudad') listQuery = listQuery.is('city', null);
+  if (issue === 'sitio') listQuery = listQuery.is('website_url', null);
   const { data, count, error } = await listQuery.order('status').order('name').range((page - 1) * SIZE, page * SIZE - 1);
   const filters = new URLSearchParams();
   if (q) filters.set('q', q);
