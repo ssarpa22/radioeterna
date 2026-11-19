@@ -62,6 +62,39 @@ export async function saveStation(_p: FormState, fd: FormData): Promise<FormStat
   return { ok: true, message: 'Cambios guardados. Si cambiaste el enlace de transmisión, debes verificarlo de nuevo antes de publicar.' };
 }
 
+export async function publishVerifiedStations(rawIds: string[]): Promise<CommandResult & { published?: number }> {
+  const staff = await requireStaff('editor');
+  if (!Array.isArray(rawIds) || rawIds.length === 0 || rawIds.length > 50) {
+    return { ok: false, message: 'Seleccioná entre 1 y 50 radios.' };
+  }
+  const ids = [...new Set(rawIds)];
+  if (ids.some((id) => !uuid.safeParse(id).success)) {
+    return { ok: false, message: 'La selección contiene identificadores no válidos.' };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('stations')
+    .update({ status: 'published' })
+    .in('id', ids)
+    .eq('status', 'draft')
+    .in('verification_status', ['verified', 'manual'])
+    .is('deleted_at', null)
+    .select('id');
+
+  if (error) return { ok: false, message: dbError(error) };
+  const published = data?.length ?? 0;
+  revalidatePath('/admin/radios');
+  revalidatePath('/');
+  return {
+    ok: published > 0,
+    published,
+    message: published === ids.length
+      ? `Se publicaron ${published} radios correctamente.`
+      : `Se publicaron ${published} de ${ids.length}. Las demás no estaban en estado borrador o no tenían verificación válida.`,
+  };
+}
+
 export type StationCommand = 'publish' | 'unpublish' | 'suspend' | 'archive' | 'restore' | 'feature' | 'unfeature' | 'verify' | 'verify_website' | 'verify_manual' | 'delete';
 export async function stationCommand(id: string, cmd: StationCommand): Promise<CommandResult> {
   const staff = await requireStaff(cmd === 'delete' ? 'admin' : 'editor');
