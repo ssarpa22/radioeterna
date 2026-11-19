@@ -84,8 +84,22 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{station.name}</p>
                   <p className="mt-0.5 text-xs text-ink/60">{station.countryCode} · {station.language.toUpperCase()} · {station.votes} votos</p>
-                  <p className="mt-2 break-all text-xs text-ink/60">{station.streamUrl}</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {station.hasChristianSignal ? (
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800">Señales cristianas detectadas</span>
+                    ) : (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-800">Sin señales cristianas</span>
+                    )}
+                    {station.hasFamilySignal && <span className="rounded-full bg-sky-50 px-2.5 py-1 font-semibold text-sky-800">Señales family friendly</span>}
+                  </div>
+                  {station.christianTags.length > 0 && <p className="mt-2 text-xs text-emerald-800">Tags cristianos: {station.christianTags.join(', ')}</p>}
                   <p className="mt-1 text-xs text-ink/60">Etiquetas: {station.tags || 'Sin etiquetas'}</p>
+                  <div className="mt-3 max-w-md">
+                    <audio controls preload="none" className="h-10 w-full" aria-label={`Escuchar ${station.name}`}>
+                      <source src={station.streamUrl} />
+                      Tu navegador no puede reproducir este stream.
+                    </audio>
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-3 text-xs">
                     {station.websiteUrl && <a href={station.websiteUrl} target="_blank" rel="noreferrer" className="text-sky underline">Sitio web</a>}
                     {station.logoUrl && <span className="text-ink/60">Logo disponible</span>}
