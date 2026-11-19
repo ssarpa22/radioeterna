@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireStaff } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { STATUS_LABEL, VERIFICATION_LABEL, fmtDate } from '@/lib/labels';
 import { isWebsiteVerificationCurrent } from '@/lib/security/website-verification';
 import { PageHeader } from '@/components/ui';
@@ -14,15 +15,18 @@ import type { VerifyResult } from '@/lib/security/verify-stream';
 export const metadata: Metadata = { title: 'Editar radio' };
 export default async function EditStation({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(); const { id } = await params; const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { data: s } = await supabase.from('stations').select('*').eq('id', id).maybeSingle();
   if (!s) notFound();
-  const [c, k, extra, logs] = await Promise.all([
+  const [c, k, extra, logs, websiteEvents] = await Promise.all([
     supabase.from('countries').select('id,code,name,slug').order('name'), supabase.from('categories').select('id,name,slug,description').order('display_order'),
     supabase.from('station_categories').select('category_id').eq('station_id', id),
-    supabase.from('station_status_logs').select('id, from_status, to_status, created_at').eq('station_id', id).order('created_at', { ascending: false }).limit(8)]);
+    supabase.from('station_status_logs').select('id, from_status, to_status, created_at').eq('station_id', id).order('created_at', { ascending: false }).limit(8),
+    adminSupabase.from('website_verification_events').select('outcome, detail, error_code, http_status, final_url, duration_ms, checked_at').eq('station_id', id).order('checked_at', { ascending: false }).limit(1).maybeSingle()]);
   const last = s.last_verification_result as (VerifyResult & { manual?: boolean; verified_by?: string }) | null;
   const websiteCurrent = isWebsiteVerificationCurrent(s.website_is_secure, s.website_verified_at);
+  const websiteEvent = websiteEvents.data;
   return (
     <>
       <PageHeader title={s.name} crumb={{ href: '/admin/radios', label: 'Radios' }} intro={<>
@@ -51,6 +55,15 @@ export default async function EditStation({ params }: { params: Promise<{ id: st
                 {s.website_verified_at && <p className="mt-1 text-ink/70">Última comprobación correcta: {fmtDate(s.website_verified_at)}.</p>}
               </div>
             )}
+            {websiteEvents.error ? <p className="mt-3 text-sm text-danger">No se pudo cargar el diagnóstico del certificado.</p> : websiteEvent ? (
+              <div className="mt-3 rounded-xl border border-line p-4 text-sm">
+                <p className="font-semibold">Último diagnóstico: {({ invalid_certificate: 'Certificado inválido', insecure_redirect: 'Redirección insegura', insecure_url: 'URL insegura', unreachable: 'Sitio no disponible', recovered: 'HTTPS recuperado' } as Record<string, string>)[websiteEvent.outcome] ?? websiteEvent.outcome}</p>
+                <p className="mt-1 text-ink/70">{websiteEvent.detail}</p>
+                <p className="mt-2 text-ink/60">Comprobado el {fmtDate(websiteEvent.checked_at)}{websiteEvent.http_status ? ` · HTTP ${websiteEvent.http_status}` : ''}{` · ${websiteEvent.duration_ms} ms`}</p>
+                {websiteEvent.error_code && <p className="mt-2">Código TLS: <code className="rounded bg-ink/5 px-1 py-0.5">{websiteEvent.error_code}</code></p>}
+                {websiteEvent.final_url && <p className="mt-1 break-all text-ink/70">URL final: <a href={websiteEvent.final_url} target="_blank" rel="noreferrer" className="text-sky hover:underline">{websiteEvent.final_url}</a></p>}
+              </div>
+            ) : <p className="mt-3 text-sm text-ink/60">Todavía no hay diagnósticos registrados.</p>}
           </section>
           <section aria-labelledby="ver"><h2 id="ver" className="mb-3 text-xl">Última prueba del stream</h2>
             {last?.manual ? <p className="text-sm">Verificada manualmente por {last.verified_by} el {fmtDate(s.last_verified_at)}.</p>
