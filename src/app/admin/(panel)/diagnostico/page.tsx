@@ -40,7 +40,7 @@ export default async function ResolutionCenter() {
     Boolean(station.website_url) &&
     !isWebsiteVerificationCurrent(station.website_is_secure, station.website_verified_at, now)
   );
-  const latestWebsiteEvent = new Map<string, (typeof eventsResult.data extends (infer T)[] | null ? T : never)>();
+  const latestWebsiteEvent = new Map<string, { outcome: string; detail: string; error_code: string | null; checked_at: string }>();
   for (const event of eventsResult.data ?? []) {
     if (event.station_id && !latestWebsiteEvent.has(event.station_id)) latestWebsiteEvent.set(event.station_id, event);
   }
