@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireStaff } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { STATUS_LABEL, VERIFICATION_LABEL } from '@/lib/labels';
+import { STATUS_LABEL, VERIFICATION_LABEL, fmtDate } from '@/lib/labels';
+import { isWebsiteVerificationCurrent } from '@/lib/security/website-verification';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
 import { PlayButton } from '@/components/player/PlayButton';
@@ -14,7 +15,7 @@ export default async function AdminStations({ searchParams }: { searchParams: SP
   await requireStaff(); const sp = await searchParams; const supabase = await createClient();
   const page = Math.max(1, parseInt(sp.pagina ?? '1', 10) || 1); const q = (sp.q ?? '').trim().slice(0, 80);
   const estado = Object.keys(STATUS_LABEL).includes(sp.estado ?? '') ? sp.estado : undefined;
-  let query = supabase.from('stations').select('id, name, slug, stream_url, stream_format, logo_url, status, verification_status, is_featured, is_demo, last_verified_at, country:countries(name), category:categories!primary_category_id(name)', { count: 'exact' }).is('deleted_at', null);
+  let query = supabase.from('stations').select('id, name, slug, stream_url, stream_format, logo_url, website_url, website_is_secure, website_verified_at, status, verification_status, is_featured, is_demo, last_verified_at, country:countries(name), category:categories!primary_category_id(name)', { count: 'exact' }).is('deleted_at', null);
   if (q) query = query.ilike('name', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
   if (estado) query = query.eq('status', estado);
   query = sp.orden === 'recientes' ? query.order('created_at', { ascending: false }) : query.order('name');
@@ -36,12 +37,18 @@ export default async function AdminStations({ searchParams }: { searchParams: SP
         {(data ?? []).length === 0 ? <EmptyState title="No hay radios con estos filtros" action={<Link href="/admin/radios/nueva" className="btn btn-primary">Crear una radio</Link>} /> :
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{(data ?? []).map((s) => {
             const countryName = (s.country as unknown as { name: string } | null)?.name;
+            const websiteCurrent = isWebsiteVerificationCurrent(s.website_is_secure, s.website_verified_at);
+            const websiteLabel = !s.website_url ? 'Sin sitio oficial' : websiteCurrent ? `HTTPS válido · ${fmtDate(s.website_verified_at)}` : s.website_is_secure && s.website_verified_at ? 'HTTPS: verificación vencida' : 'HTTPS: pendiente';
             return (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-gold-soft/40">
                 <Link href={`/admin/radios/${s.id}`} className="min-w-0 flex-1">
                   <span className="font-semibold">{s.name}</span>{s.is_demo && <span className="badge ml-2">DEMO</span>}{s.is_featured && <span className="badge ml-2">Destacada</span>}
                   <span className="block text-sm text-ink/70">{countryName} · {(s.category as unknown as { name: string } | null)?.name}</span>
-                  <span className="mt-1 flex flex-wrap gap-2 text-sm"><span className="badge">{STATUS_LABEL[s.status]}</span><span className="badge">{VERIFICATION_LABEL[s.verification_status]}</span></span>
+                  <span className="mt-1 flex flex-wrap gap-2 text-sm">
+                    <span className="badge">{STATUS_LABEL[s.status]}</span>
+                    <span className="badge">Stream: {VERIFICATION_LABEL[s.verification_status]}</span>
+                    <span className="badge">{websiteLabel}</span>
+                  </span>
                 </Link>
                 {s.status === 'draft' && s.stream_url && (
                   <div className="flex shrink-0 items-center gap-2">
