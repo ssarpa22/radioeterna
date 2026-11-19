@@ -36,7 +36,7 @@ jobs:
               endpoint="${endpoint}?cursor=${cursor}"
             fi
 
-            response="$(curl --fail-with-body --silent --show-error \
+            response="$(curl --request POST --fail-with-body --silent --show-error \
               --max-time 20 \
               -H "Authorization: Bearer ${WEBSITE_MONITOR_SECRET}" \
               "${endpoint}")"
