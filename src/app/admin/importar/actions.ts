@@ -39,7 +39,7 @@ const MIRRORS = [
   'https://at1.api.radio-browser.info',
   'https://nl1.api.radio-browser.info',
 ];
-const CHRISTIAN_SIGNAL = /(christian|cristian|evangel|gospel|biblia|bible|worship|adoracion|alabanza|iglesia|jesus|cristo|religious|catolic)/;
+const CHRISTIAN_OR_FAMILY_SIGNAL = /(christian|cristian|evangel|gospel|biblia|bible|worship|adoracion|alabanza|iglesia|jesus|cristo|religious|catolic|family|familia|family friendly|kids|children|infantil|ninos|ninos|child|educational|educativa|clean|safe for work)/;
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 async function requireSuperAdmin() {
@@ -52,10 +52,10 @@ async function radioBrowserSearch(countryCode: string, term: string): Promise<Ra
   const params = new URLSearchParams({
     countrycode: countryCode,
     lastcheckok: '1',
-    limit: '100',
+    limit: '500',
     order: 'votes',
     reverse: 'true',
-    name: term,
+    ...(term ? { name: term } : {}),
   });
   for (const mirror of MIRRORS) {
     try {
@@ -123,7 +123,7 @@ function toCandidate(station: RadioBrowserStation, expectedCountry: string): Rad
   const signal = normalize(`${name} ${station.tags ?? ''}`);
   if (!station.stationuuid || !name || name.length < 2) return null;
   if ((station.countrycode ?? '').toUpperCase() !== expectedCountry || station.lastcheckok !== 1) return null;
-  if (!CHRISTIAN_SIGNAL.test(signal) || !streamUrl.startsWith('https://') || streamUrl.length > 2048 || /\s/.test(streamUrl)) return null;
+  if (!CHRISTIAN_OR_FAMILY_SIGNAL.test(signal) || !streamUrl.startsWith('https://') || streamUrl.length > 2048 || /\s/.test(streamUrl)) return null;
   try {
     const parsed = new URL(streamUrl);
     if (parsed.username || parsed.password) return null;
@@ -153,8 +153,8 @@ export async function searchRadioCandidates(countryCode: string, rawTerm: string
     }
     const code = countryCode.trim().toUpperCase();
     const term = rawTerm.trim().slice(0, 80);
-    if (!/^[A-Z]{2}$/.test(code) || term.length < 2) {
-      return { ok: false, message: 'Elegí un país e ingresá al menos 2 caracteres para buscar.' };
+    if (!/^[A-Z]{2}$/.test(code)) {
+      return { ok: false, message: 'Elegí un país para buscar emisoras.' };
     }
     const supabase = await createClient();
     const { data: country } = await supabase.from('countries').select('code').eq('code', code).eq('is_active', true).maybeSingle();
@@ -165,7 +165,8 @@ export async function searchRadioCandidates(countryCode: string, rawTerm: string
       const candidate = toCandidate(row, code);
       if (candidate && !unique.has(candidate.stationUuid)) unique.set(candidate.stationUuid, candidate);
     }
-    return { ok: true, message: `Se encontraron ${unique.size} emisoras candidatas con señal cristiana y stream HTTPS.`, data: [...unique.values()].slice(0, 40) };
+    const mode = term ? `que coinciden con “${term}”` : 'del país';
+    return { ok: true, message: `Se encontraron ${unique.size} emisoras candidatas ${mode} con señales cristianas o family friendly y stream HTTPS.`, data: [...unique.values()].slice(0, 100) };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'No se pudo completar la búsqueda.' };
   }
