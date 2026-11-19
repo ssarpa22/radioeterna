@@ -55,6 +55,15 @@ export default async function WebsiteMonitoring({ searchParams }: {
   ).length;
   const pending = stations.filter((station) => !station.website_verified_at).length;
 
+  const needsReview = stations
+    .filter((station) => !isWebsiteVerificationCurrent(station.website_is_secure, station.website_verified_at, now))
+    .sort((a, b) => {
+      if (!a.website_verified_at) return b.website_verified_at ? -1 : a.name.localeCompare(b.name);
+      if (!b.website_verified_at) return 1;
+      return new Date(a.website_verified_at).getTime() - new Date(b.website_verified_at).getTime();
+    });
+  const visibleNeedsReview = needsReview.slice(0, 20);
+
   const filters: { value: Filter; label: string }[] = [
     { value: 'todos', label: 'Todos los eventos' },
     { value: 'errores', label: 'Incidentes' },
@@ -79,6 +88,62 @@ export default async function WebsiteMonitoring({ searchParams }: {
             <div className="rounded-2xl border border-line bg-white p-4"><dt className="text-sm text-ink/70">Verificación vencida</dt><dd className="mt-1 font-display text-4xl">{expired}</dd></div>
           </dl>
           <p className="mt-3 text-sm text-ink/60">{pending} sitio(s) todavía no tienen una verificación HTTPS exitosa registrada. Las verificaciones vigentes caducan a los 30 días.</p>
+        </section>
+
+        <section aria-labelledby="sitios-revision">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="sitios-revision" className="text-xl">Sitios que necesitan revisión</h2>
+              <p className="mt-1 text-sm text-ink/60">Radios cuyo sitio oficial todavía no tiene una verificación HTTPS vigente.</p>
+            </div>
+            <span className="text-sm font-semibold text-danger">{needsReview.length} pendiente(s) de revisión</span>
+          </div>
+          {needsReview.length === 0 ? (
+            <div className="rounded-2xl border border-ok/30 bg-[#E6F2EC] p-5 text-sm text-ok" role="status">
+              Todos los sitios oficiales publicados tienen una verificación HTTPS vigente.
+            </div>
+          ) : (
+            <>
+              <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
+                {visibleNeedsReview.map((station) => {
+                  const expiredCheck = Boolean(station.website_is_secure && station.website_verified_at);
+                  const reason = !station.website_verified_at
+                    ? 'Pendiente de primera verificación'
+                    : expiredCheck
+                      ? 'Verificación HTTPS vencida'
+                      : 'HTTPS no validado';
+                  return (
+                    <li key={station.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold">{station.name}</p>
+                        <p className="mt-1 text-sm text-danger">{reason}</p>
+                        <p className="mt-1 text-xs text-ink/60">
+                          {station.website_verified_at
+                            ? `Última verificación correcta: ${fmtDate(station.website_verified_at)}`
+                            : 'Todavía no hay una verificación correcta registrada.'}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-sm">
+                        {station.website_url && (
+                          <a href={station.website_url} target="_blank" rel="noreferrer" className="text-sky hover:underline">
+                            Sitio oficial ↗
+                          </a>
+                        )}
+                        <Link href={`/admin/radios/${station.id}`} className="font-semibold text-sky hover:underline">
+                          Revisar radio →
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {needsReview.length > visibleNeedsReview.length && (
+                <p className="mt-3 text-sm text-ink/60">
+                  Mostrando {visibleNeedsReview.length} de {needsReview.length} sitios. Se priorizan los que llevan más tiempo sin una verificación vigente.
+                </p>
+              )}
+            </>
+          )}
         </section>
 
         <section aria-labelledby="historial-monitoreo">
