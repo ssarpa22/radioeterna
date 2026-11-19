@@ -18,6 +18,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState<RadioCandidate[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [manualAudioConfirmed, setManualAudioConfirmed] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [skipped, setSkipped] = useState<{ name: string; reason: string }[]>([]);
   const [imported, setImported] = useState<{ id: string; name: string }[]>([]);
@@ -33,6 +34,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
       setMessage(response.message);
       setResults(response.ok ? response.data ?? [] : []);
       setSelected([]);
+      setManualAudioConfirmed([]);
     });
   };
 
@@ -46,11 +48,11 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
     setImported([]);
     setSkipped([]);
     startTransition(async () => {
-      const response = await importRadioCandidates(selected);
+      const response = await importRadioCandidates(selected, manualAudioConfirmed);
       setMessage(response.message);
       setImported(response.data?.imported ?? []);
       setSkipped(response.data?.skipped ?? []);
-      if (response.ok) setSelected([]);
+      if (response.ok) { setSelected([]); setManualAudioConfirmed([]); }
     });
   };
 
@@ -72,7 +74,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
             {pending ? 'Buscando…' : 'Buscar emisoras'}
           </button>
         </div>
-        <p className="mt-3 text-sm text-ink/65">Si dejás la búsqueda vacía, exploramos hasta 500 emisoras del país y filtramos candidatas con señales cristianas o family friendly en el nombre o las etiquetas. También podés escribir una frase para acotar. Solo mostramos streams HTTPS activos; la importación vuelve a comprobar el audio antes de guardar.</p>
+        <p className="mt-3 text-sm text-ink/65">Si dejás la búsqueda vacía, exploramos hasta 500 emisoras del país y filtramos candidatas con señales cristianas o family friendly en el nombre o las etiquetas. También podés escribir una frase para acotar. Solo mostramos streams HTTPS activos; la importación vuelve a comprobar el audio antes de guardar. Si escuchaste una emisora y funciona pero el detector no reconoce su formato, marcá la confirmación manual: igualmente exigiremos una respuesta HTTPS válida y rechazaremos páginas web y listas de reproducción.</p>
       </section>
 
       {message && <p role="status" className="rounded-xl border border-line bg-white px-4 py-3 text-sm">{message}</p>}
@@ -109,6 +111,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
                     {station.hasFamilySignal && <span className="rounded-full bg-sky-50 px-2.5 py-1 font-semibold text-sky-800">Señales family friendly</span>}
                   </div>
                   {station.christianTags.length > 0 && <p className="mt-2 text-xs text-emerald-800">Tags cristianos: {station.christianTags.join(', ')}</p>}
+                  {!station.existingStation && <label className="mt-2 flex items-start gap-2 text-xs text-ink/70"><input type="checkbox" checked={manualAudioConfirmed.includes(station.stationUuid)} onChange={(event) => setManualAudioConfirmed((current) => event.target.checked ? [...current, station.stationUuid] : current.filter((id) => id !== station.stationUuid))} disabled={pending} className="mt-0.5 h-4 w-4 shrink-0 accent-[#12284B]" /><span>Confirmo que escuché esta emisora y funciona. Permitir importarla si el detector automático no reconoce el formato de audio.</span></label>}
                   <p className="mt-1 text-xs text-ink/60">Etiquetas: {station.tags || 'Sin etiquetas'}</p>
                   <div className="mt-3 max-w-md">
                     <audio

@@ -205,13 +205,14 @@ export async function searchRadioCandidates(countryCode: string, rawTerm: string
   }
 }
 
-export async function importRadioCandidates(uuids: string[]): Promise<ActionResult<{ imported: { id: string; name: string }[]; skipped: { name: string; reason: string }[] }>> {
+export async function importRadioCandidates(uuids: string[], manualAudioConfirmedUuids: string[] = []): Promise<ActionResult<{ imported: { id: string; name: string }[]; skipped: { name: string; reason: string }[] }>> {
   try {
     const staff = await requireSuperAdmin();
     if (!(await rateLimit(`radio-import-save:${staff.id}`, 5, 60))) {
       return { ok: false, message: 'Hiciste muchas importaciones seguidas. Esperá un minuto.' };
     }
     const selected = [...new Set(uuids)].slice(0, 20);
+    const manualAudioConfirmed = new Set(manualAudioConfirmedUuids.filter((id) => selected.includes(id)));
     if (!selected.length || selected.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) {
       return { ok: false, message: 'La selección no es válida.' };
     }
@@ -252,7 +253,15 @@ export async function importRadioCandidates(uuids: string[]): Promise<ActionResu
 
       const verification = await verifyStream(candidate.streamUrl, { timeoutMs: 8_000 });
       const finalUrl = verification.final_url;
-      if (!verification.reachable || !verification.audio_detected || !finalUrl?.startsWith('https://')) {
+      const hasExplicitNonAudioResponse = verification.notes.some((note) => /página web|lista de reproducción/i.test(note))
+        || /^(text\/html|application\/(x-mpegurl|vnd\.apple\.mpegurl))/i.test(verification.content_type ?? '');
+      const safeManualAudioConfirmation = manualAudioConfirmed.has(uuid)
+        && verification.reachable
+        && verification.http_status !== null && verification.http_status >= 200 && verification.http_status < 300
+        && !verification.error
+        && !hasExplicitNonAudioResponse
+        && Boolean(finalUrl?.startsWith('https://'));
+      if (!verification.reachable || (!verification.audio_detected && !safeManualAudioConfirmation) || !finalUrl?.startsWith('https://')) {
         skipped.push({ name: label, reason: verification.error || verification.notes[0] || 'No se pudo confirmar audio HTTPS.' });
         return;
       }
@@ -285,7 +294,7 @@ export async function importRadioCandidates(uuids: string[]): Promise<ActionResu
         is_featured: false,
         is_demo: false,
         last_verified_at: verification.checked_at,
-        last_verification_result: verification,
+        last_verification_result: { ...verification, manual_audio_confirmation: safeManualAudioConfirmation },
         display_order: 0,
       }).select('id').single();
 
