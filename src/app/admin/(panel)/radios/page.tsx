@@ -12,6 +12,25 @@ import { BulkPublishStations } from '@/components/admin/BulkPublishStations';
 export const metadata: Metadata = { title: 'Radios' };
 const SIZE = 25; type SP = Promise<{ q?: string; estado?: string; orden?: string; pagina?: string }>;
 
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'published':
+    case 'verified':
+    case 'manual':
+      return 'badge badge-success';
+    case 'draft':
+    case 'pending_review':
+    case 'unverified':
+      return 'badge badge-warning';
+    case 'suspended':
+      return 'badge badge-info';
+    case 'failed':
+      return 'badge badge-danger';
+    default:
+      return 'badge';
+  }
+}
+
 export default async function AdminStations({ searchParams }: { searchParams: SP }) {
   await requireStaff(); const sp = await searchParams; const supabase = await createClient();
   const page = Math.max(1, parseInt(sp.pagina ?? '1', 10) || 1); const q = (sp.q ?? '').trim().slice(0, 80);
@@ -41,15 +60,16 @@ export default async function AdminStations({ searchParams }: { searchParams: SP
             const countryName = (s.country as unknown as { name: string } | null)?.name;
             const websiteCurrent = isWebsiteVerificationCurrent(s.website_is_secure, s.website_verified_at);
             const websiteLabel = !s.website_url ? 'Sin sitio oficial' : websiteCurrent ? `HTTPS válido · ${fmtDate(s.website_verified_at)}` : s.website_is_secure && s.website_verified_at ? 'HTTPS: verificación vencida' : 'HTTPS: pendiente';
+            const websiteBadgeClass = !s.website_url ? 'badge' : websiteCurrent ? 'badge badge-success' : s.website_verified_at && !s.website_is_secure ? 'badge badge-danger' : 'badge badge-warning';
             return (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-gold-soft/40">
                 <Link href={`/admin/radios/${s.id}`} className="min-w-0 flex-1">
                   <span className="font-semibold">{s.name}</span>{s.is_demo && <span className="badge ml-2">DEMO</span>}{s.is_featured && <span className="badge ml-2">Destacada</span>}
                   <span className="block text-sm text-ink/70">{countryName} · {(s.category as unknown as { name: string } | null)?.name}</span>
                   <span className="mt-1 flex flex-wrap gap-2 text-sm">
-                    <span className="badge">{STATUS_LABEL[s.status]}</span>
-                    <span className="badge">Stream: {VERIFICATION_LABEL[s.verification_status]}</span>
-                    <span className="badge">{websiteLabel}</span>
+                    <span className={statusBadgeClass(s.status)}>{STATUS_LABEL[s.status]}</span>
+                    <span className={statusBadgeClass(s.verification_status)}>Stream: {VERIFICATION_LABEL[s.verification_status]}</span>
+                    <span className={websiteBadgeClass}>{websiteLabel}</span>
                   </span>
                 </Link>
                 {s.status === 'draft' && s.stream_url && (
