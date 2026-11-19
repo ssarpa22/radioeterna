@@ -62,6 +62,7 @@ export default async function CatalogQuality({ searchParams }: { searchParams: P
   if (issue === 'descripcion') listQuery = listQuery.or('short_description.is.null,description.is.null');
   if (issue === 'ciudad') listQuery = listQuery.is('city', null);
   if (issue === 'sitio') listQuery = listQuery.is('website_url', null);
+  if (!issue) listQuery = listQuery.or('logo_url.is.null,short_description.is.null,description.is.null,city.is.null,website_url.is.null');
   const { data, count, error } = await listQuery.order('status').order('name').range((page - 1) * SIZE, page * SIZE - 1);
   const filters = new URLSearchParams();
   if (q) filters.set('q', q);
