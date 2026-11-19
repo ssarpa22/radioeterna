@@ -33,6 +33,7 @@ export type RadioCandidate = {
   hasChristianSignal: boolean;
   hasFamilySignal: boolean;
   christianTags: string[];
+  existingStation?: { id: string; name: string; status: string };
 };
 
 type ActionResult<T> = { ok: boolean; message: string; data?: T };
@@ -167,7 +168,7 @@ export async function searchRadioCandidates(countryCode: string, rawTerm: string
       return { ok: false, message: 'Elegí un país para buscar emisoras.' };
     }
     const supabase = await createClient();
-    const { data: country } = await supabase.from('countries').select('code').eq('code', code).eq('is_active', true).maybeSingle();
+    const { data: country } = await supabase.from('countries').select('id,code').eq('code', code).eq('is_active', true).maybeSingle();
     if (!country) return { ok: false, message: 'El país seleccionado no está activo en Radio Eterna.' };
     const rows = await radioBrowserSearch(code, term);
     const unique = new Map<string, RadioCandidate>();
@@ -176,7 +177,29 @@ export async function searchRadioCandidates(countryCode: string, rawTerm: string
       if (candidate && !unique.has(candidate.stationUuid)) unique.set(candidate.stationUuid, candidate);
     }
     const mode = term ? `que coinciden con “${term}”` : 'del país';
-    return { ok: true, message: `Se encontraron ${unique.size} emisoras candidatas ${mode} con señales cristianas o family friendly y stream HTTPS.`, data: [...unique.values()].slice(0, 100) };
+    const candidates = [...unique.values()].slice(0, 100);
+    if (candidates.length > 0) {
+      const streamUrls = [...new Set(candidates.map((candidate) => candidate.streamUrl))];
+      const names = [...new Set(candidates.map((candidate) => candidate.name))];
+      const [byStream, byName] = await Promise.all([
+        supabase.from('stations').select('id,name,status,stream_url').in('stream_url', streamUrls).is('deleted_at', null),
+        supabase.from('stations').select('id,name,status,stream_url').eq('country_id', country.id).in('name', names).is('deleted_at', null),
+      ]);
+      if (byStream.error || byName.error) {
+        throw new Error('No se pudo comprobar si las emisoras ya están importadas. Volvé a intentar la búsqueda.');
+      }
+      const existingByStream = new Map((byStream.data ?? []).map((station) => [station.stream_url, station]));
+      const existingByName = new Map((byName.data ?? []).map((station) => [station.name.trim().toLocaleLowerCase(), station]));
+      for (const candidate of candidates) {
+        const existing = existingByStream.get(candidate.streamUrl)
+          ?? existingByName.get(candidate.name.trim().toLocaleLowerCase());
+        if (existing) {
+          candidate.existingStation = { id: existing.id, name: existing.name, status: existing.status };
+        }
+      }
+    }
+    const alreadyImported = candidates.filter((candidate) => candidate.existingStation).length;
+    return { ok: true, message: `Se encontraron ${candidates.length} emisoras candidatas ${mode}; ${alreadyImported} ya están importadas.`, data: candidates };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'No se pudo completar la búsqueda.' };
   }

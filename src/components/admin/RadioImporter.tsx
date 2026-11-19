@@ -1,10 +1,17 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { importRadioCandidates, searchRadioCandidates, type RadioCandidate } from '@/app/admin/importar/actions';
 
 type CountryOption = { id: string; code: string; name: string };
+
+const EXISTING_STATUS: Record<string, { label: string; className: string }> = {
+  published: { label: 'Publicada', className: 'bg-emerald-50 text-emerald-800' },
+  draft: { label: 'Borrador', className: 'bg-amber-50 text-amber-800' },
+  suspended: { label: 'Suspendida', className: 'bg-rose-50 text-rose-800' },
+  archived: { label: 'Archivada', className: 'bg-slate-100 text-slate-700' },
+};
 
 export function RadioImporter({ countries }: { countries: CountryOption[] }) {
   const [country, setCountry] = useState(countries.find((item) => item.code === 'AR')?.code ?? countries[0]?.code ?? '');
@@ -15,6 +22,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
   const [skipped, setSkipped] = useState<{ name: string; reason: string }[]>([]);
   const [imported, setImported] = useState<{ id: string; name: string }[]>([]);
   const [pending, startTransition] = useTransition();
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const search = () => {
     setMessage('');
@@ -72,7 +80,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
       {results.length > 0 && (
         <section className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 className="text-xl">Emisoras encontradas</h2><p className="text-sm text-ink/65">Seleccioná hasta 20 por importación.</p><button type="button" onClick={() => setSelected(results.slice(0, 20).map((station) => station.stationUuid))} disabled={pending || results.length === 0} className="mt-2 text-sm font-semibold text-sky underline">Seleccionar primeras 20</button></div>
+            <div><h2 className="text-xl">Emisoras encontradas</h2><p className="text-sm text-ink/65">Seleccioná hasta 20 por importación. Las radios existentes quedan excluidas automáticamente.</p><button type="button" onClick={() => setSelected(results.filter((station) => !station.existingStation).slice(0, 20).map((station) => station.stationUuid))} disabled={pending || results.length === 0} className="mt-2 text-sm font-semibold text-sky underline">Seleccionar primeras 20</button></div>
             <button type="button" onClick={importSelected} disabled={pending || selected.length === 0} className="btn btn-primary">
               {pending ? 'Procesando…' : `Importar seleccionadas (${selected.length}/20)`}
             </button>
@@ -80,10 +88,18 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {results.map((station) => (
               <li key={station.stationUuid} className="flex items-start gap-3 p-4">
-                <input type="checkbox" aria-label={`Seleccionar ${station.name}`} checked={selected.includes(station.stationUuid)} disabled={pending || (!selected.includes(station.stationUuid) && selected.length >= 20)} onChange={() => toggle(station.stationUuid)} className="mt-1 h-5 w-5 shrink-0 accent-[#12284B]" />
+                <input type="checkbox" aria-label={`Seleccionar ${station.name}`} checked={selected.includes(station.stationUuid)} disabled={pending || Boolean(station.existingStation) || (!selected.includes(station.stationUuid) && selected.length >= 20)} onChange={() => toggle(station.stationUuid)} className="mt-1 h-5 w-5 shrink-0 accent-[#12284B]" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{station.name}</p>
                   <p className="mt-0.5 text-xs text-ink/60">{station.countryCode} · {station.language.toUpperCase()} · {station.votes} votos</p>
+                  {station.existingStation && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className={`rounded-full px-2.5 py-1 font-semibold ${EXISTING_STATUS[station.existingStation.status]?.className ?? 'bg-slate-100 text-slate-700'}`}>
+                        Ya importada · {EXISTING_STATUS[station.existingStation.status]?.label ?? station.existingStation.status}
+                      </span>
+                      <Link href={`/admin/radios/${station.existingStation.id}`} className="font-semibold text-sky underline">Abrir ficha existente</Link>
+                    </div>
+                  )}
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     {station.hasChristianSignal ? (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800">Señales cristianas detectadas</span>
@@ -95,7 +111,25 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
                   {station.christianTags.length > 0 && <p className="mt-2 text-xs text-emerald-800">Tags cristianos: {station.christianTags.join(', ')}</p>}
                   <p className="mt-1 text-xs text-ink/60">Etiquetas: {station.tags || 'Sin etiquetas'}</p>
                   <div className="mt-3 max-w-md">
-                    <audio controls preload="none" className="h-10 w-full" aria-label={`Escuchar ${station.name}`}>
+                    <audio
+                      controls
+                      preload="none"
+                      className="h-10 w-full"
+                      aria-label={`Escuchar ${station.name}`}
+                      onPlay={(event) => {
+                        const currentAudio = event.currentTarget;
+                        if (activeAudioRef.current && activeAudioRef.current !== currentAudio) {
+                          activeAudioRef.current.pause();
+                        }
+                        activeAudioRef.current = currentAudio;
+                      }}
+                      onPause={(event) => {
+                        if (activeAudioRef.current === event.currentTarget) activeAudioRef.current = null;
+                      }}
+                      onEnded={(event) => {
+                        if (activeAudioRef.current === event.currentTarget) activeAudioRef.current = null;
+                      }}
+                    >
                       <source src={station.streamUrl} />
                       Tu navegador no puede reproducir este stream.
                     </audio>
