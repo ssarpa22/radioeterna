@@ -7,6 +7,7 @@ const LINKS: [string, string][] = [
   ['/admin', 'Resumen'],
   ['/admin/radios', 'Radios'],
   ['/admin/diagnostico', 'Resolver problemas'],
+  ['/admin/calidad', 'Calidad del catálogo'],
   ['/admin/monitoreo', 'Monitoreo web'],
   ['/admin/importar', 'Importar emisoras'],
   ['/admin/solicitudes', 'Solicitudes'],
