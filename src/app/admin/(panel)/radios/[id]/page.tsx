@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { requireStaff } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, VERIFICATION_LABEL, fmtDate } from '@/lib/labels';
+import { isWebsiteVerificationCurrent } from '@/lib/security/website-verification';
 import { PageHeader } from '@/components/ui';
 import { StationForm } from '@/components/admin/StationForm';
 import { StationCommands } from '@/components/admin/StationCommands';
@@ -21,10 +22,11 @@ export default async function EditStation({ params }: { params: Promise<{ id: st
     supabase.from('station_categories').select('category_id').eq('station_id', id),
     supabase.from('station_status_logs').select('id, from_status, to_status, created_at').eq('station_id', id).order('created_at', { ascending: false }).limit(8)]);
   const last = s.last_verification_result as (VerifyResult & { manual?: boolean; verified_by?: string }) | null;
+  const websiteCurrent = isWebsiteVerificationCurrent(s.website_is_secure, s.website_verified_at);
   return (
     <>
       <PageHeader title={s.name} crumb={{ href: '/admin/radios', label: 'Radios' }} intro={<>
-        <span className="badge mr-2">{STATUS_LABEL[s.status]}</span><span className="badge mr-2">{VERIFICATION_LABEL[s.verification_status]}</span>
+        <span className="badge mr-2">{STATUS_LABEL[s.status]}</span><span className="badge mr-2">Stream: {VERIFICATION_LABEL[s.verification_status]}</span>
         {s.status === 'published' && <Link href={`/radios/${s.slug}`} className="text-sky hover:underline">Ver en el sitio</Link>}{s.deleted_at && <span className="badge">Eliminada</span>}</>} />
       <div className="wrap grid gap-10 py-8 lg:grid-cols-[1fr_340px]">
         <div className="grid gap-8">
@@ -34,10 +36,25 @@ export default async function EditStation({ params }: { params: Promise<{ id: st
             <StationForm station={s} countries={c.data ?? []} categories={k.data ?? []} extraIds={(extra.data ?? []).map((e) => e.category_id)} /></section>
         </div>
         <aside className="grid content-start gap-8">
-          <section aria-labelledby="web"><h2 id="web" className="mb-3 text-xl">Seguridad del sitio oficial</h2><p className="text-sm text-ink/70">{s.website_url ? (s.website_is_secure && s.website_verified_at ? `HTTPS comprobado el ${fmtDate(s.website_verified_at)}. La verificación vence a los 30 días.` : 'No verificado o vencido: el sitio oficial permanece oculto al público.') : 'No hay sitio web cargado.'}</p></section>
-          <section aria-labelledby="ver"><h2 id="ver" className="mb-3 text-xl">Última verificación</h2>
+          <section aria-labelledby="web">
+            <h2 id="web" className="mb-3 text-xl">Certificado HTTPS del sitio oficial</h2>
+            {!s.website_url ? <p className="text-sm text-ink/70">No hay sitio web cargado.</p> : websiteCurrent ? (
+              <div className="rounded-xl border border-ok/40 bg-[#E6F2EC] p-4 text-sm" role="status">
+                <p className="font-semibold text-ok">HTTPS válido al momento de la comprobación</p>
+                <p className="mt-1">Verificado el {fmtDate(s.website_verified_at)}.</p>
+                <p className="mt-1 text-ink/70">La comprobación confirma que el sitio respondió mediante HTTPS con un certificado válido. La verificación vence a los 30 días.</p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-line p-4 text-sm">
+                <p className="font-semibold">{s.website_is_secure && s.website_verified_at ? 'La verificación HTTPS está vencida' : 'El certificado todavía no fue verificado'}</p>
+                <p className="mt-1 text-ink/70">El sitio oficial permanece oculto al público hasta completar una nueva comprobación satisfactoria.</p>
+                {s.website_verified_at && <p className="mt-1 text-ink/70">Última comprobación correcta: {fmtDate(s.website_verified_at)}.</p>}
+              </div>
+            )}
+          </section>
+          <section aria-labelledby="ver"><h2 id="ver" className="mb-3 text-xl">Última prueba del stream</h2>
             {last?.manual ? <p className="text-sm">Verificada manualmente por {last.verified_by} el {fmtDate(s.last_verified_at)}.</p>
-              : last ? <VerifyResultView r={last} /> : <p className="text-sm text-ink/70">Este enlace todavía no se ha verificado.</p>}</section>
+              : last ? <VerifyResultView r={last} /> : <p className="text-sm text-ink/70">Este stream todavía no se ha verificado.</p>}</section>
           <section aria-labelledby="hist"><h2 id="hist" className="mb-3 text-xl">Historial de estados</h2>
             <ul className="grid gap-2 text-sm">{(logs.data ?? []).map((l) => <li key={l.id}>{l.from_status ? `${STATUS_LABEL[l.from_status]} → ` : 'Creada como '}<strong>{STATUS_LABEL[l.to_status]}</strong><span className="block text-ink/60">{fmtDate(l.created_at)}</span></li>)}</ul></section>
         </aside>
