@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       serverSecretLengthValid: Boolean(secret && secret.length >= 32),
       authorizationHeaderPresent: Boolean(authorization),
       bearerTokenPresent: Boolean(supplied),
-      tokenLengthMatches: Boolean(secret && supplied && Buffer.byteLength(secret) === Buffer.byteLength(supplied)),
+      tokenMatches: Boolean(secret && secret.length >= 32 && supplied && Buffer.byteLength(secret) === Buffer.byteLength(supplied) && timingSafeEqual(Buffer.from(secret), Buffer.from(supplied))),
     });
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
