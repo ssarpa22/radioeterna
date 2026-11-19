@@ -8,7 +8,7 @@ alter table public.website_verification_events
 update public.stations
 set website_url = 'https://catolicaradiopr.com/'
 where lower(name) = 'catolica radio'
-  and website_url ~* '^https://www\\.catolicaradiopr\\.com/?$';
+  and website_url ~* '^https://www\.catolicaradiopr\.com/?$';
 
 -- Radio Cristiana 88.3 intentionally remains unchanged: its domain redirects to
 -- Radio Cristiana 92.5, and we have not established that they are the same station.

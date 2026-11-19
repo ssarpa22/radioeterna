@@ -19,7 +19,7 @@ type Station = {
 
 function authorized(request: Request): boolean {
   const secret = process.env.WEBSITE_MONITOR_SECRET;
-  const supplied = request.headers.get('authorization')?.replace(/^Bearer\\s+/i, '');
+  const supplied = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!secret || secret.length < 32 || !supplied) return false;
   const expectedBuffer = Buffer.from(secret);
   const suppliedBuffer = Buffer.from(supplied);
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   if (!authorized(request)) {
     const secret = process.env.WEBSITE_MONITOR_SECRET;
     const authorization = request.headers.get('authorization');
-    const supplied = authorization?.replace(/^Bearer\\s+/i, '');
+    const supplied = authorization?.replace(/^Bearer\s+/i, '');
     console.warn('[website-monitor] Authentication rejected:', {
       serverSecretConfigured: Boolean(secret),
       serverSecretLengthValid: Boolean(secret && secret.length >= 32),

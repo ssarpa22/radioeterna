@@ -11,7 +11,7 @@ beforeAll(async () => {
     if (req.url === '/redir') { res.writeHead(302, { location: '/mp3' }); return res.end(); }
     if (req.url === '/loop') { res.writeHead(302, { location: '/loop' }); return res.end(); }
     if (req.url === '/html') { res.writeHead(200, { 'content-type': 'audio/mpeg' }); return res.end('<!DOCTYPE html><html></html>'); }
-    if (req.url === '/hls') { res.writeHead(200, { 'content-type': 'application/vnd.apple.mpegurl' }); return res.end('#EXTM3U\\n#EXT-X-VERSION:3\\n#EXTINF:10,\\nseg.ts\\n'); }
+    if (req.url === '/hls') { res.writeHead(200, { 'content-type': 'application/vnd.apple.mpegurl' }); return res.end('#EXTM3U\n#EXT-X-VERSION:3\n#EXTINF:10,\nseg.ts\n'); }
     if (req.url === '/forbidden') { res.writeHead(403); return res.end(); }
     if (req.url === '/hang') { res.writeHead(200, { 'content-type': 'audio/mpeg' }); return; }
     res.writeHead(404); res.end();
@@ -53,6 +53,6 @@ describe('certificate diagnostics', () => {
 });
 describe('detectAudio', () => {
   it('ADTS AAC vs MP3 frame sync', () => { expect(detectAudio(Buffer.from([0xff, 0xf1, 0, 0]), null).format).toBe('aac'); expect(detectAudio(Buffer.from([0xff, 0xfb, 0, 0]), null).format).toBe('mp3'); });
-  it('Ogg and ID3', () => { expect(detectAudio(Buffer.from('OggS....'), null).format).toBe('ogg'); expect(detectAudio(Buffer.from('ID3\\x04'), null).format).toBe('mp3'); });
-  it('plain .m3u is not a stream', () => { expect(detectAudio(Buffer.from('#EXTM3U\\nhttp://x/y'), null).format).toBeNull(); });
+  it('Ogg and ID3', () => { expect(detectAudio(Buffer.from('OggS....'), null).format).toBe('ogg'); expect(detectAudio(Buffer.from('ID3\x04'), null).format).toBe('mp3'); });
+  it('plain .m3u is not a stream', () => { expect(detectAudio(Buffer.from('#EXTM3U\nhttp://x/y'), null).format).toBeNull(); });
 });
