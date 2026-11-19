@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const LINKS: [string, string][] = [
   ['/admin', 'Resumen'],
   ['/admin/radios', 'Radios'],
+  ['/admin/diagnostico', 'Resolver problemas'],
   ['/admin/monitoreo', 'Monitoreo web'],
   ['/admin/importar', 'Importar emisoras'],
   ['/admin/solicitudes', 'Solicitudes'],
