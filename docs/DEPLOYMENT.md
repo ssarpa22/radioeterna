@@ -13,6 +13,7 @@ Esta guía describe el despliegue actual y las tareas que todavía requieren con
 | Anti-spam | Cloudflare Turnstile | En producción requiere site key y secret key |
 | Rate limiting distribuido | Upstash Redis | Opcional; sin backend distribuido el límite puede ser por instancia |
 | Correo transaccional | No implementado | No hay notificaciones por correo |
+| Monitoreo de sitios oficiales | GitHub Actions + Vercel API + Supabase | Revisión diaria por lotes; incidencias persistidas en Supabase |
 
 ## Entornos
 
@@ -31,18 +32,20 @@ En Vercel → Settings → Environment Variables, configurar según el entorno:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (solo para la ruta privada de monitoreo automático; nunca se expone al cliente)
+- `WEBSITE_MONITOR_SECRET` (secreto compartido entre Vercel y GitHub Actions)
 
 Opcionales:
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
-En producción, ambas variables de Turnstile son necesarias para habilitar los envíos públicos. Si falta alguna, el formulario rechaza el envío de forma segura. No configures `SUPABASE_SERVICE_ROLE_KEY`: la aplicación no la necesita.
+En producción, ambas variables de Turnstile son necesarias para habilitar los envíos públicos. Si falta alguna, el formulario rechaza el envío de forma segura. `SUPABASE_SERVICE_ROLE_KEY` solo se utiliza en el endpoint privado del monitor, del lado del servidor; nunca la agregues a variables `NEXT_PUBLIC_*`, al repositorio ni a GitHub Actions.
 
 ## Base de datos y migraciones
 
-Las migraciones SQL versionadas se encuentran en `supabase/migrations/`. La serie actual llega a `0008_website_verification_expiry.sql`.
+Las migraciones SQL versionadas se encuentran en `supabase/migrations/`. La serie actual llega a `0009_website_monitoring_events.sql`.
 
-La migración 0007 agrega `stations.website_is_secure`, aplicada manualmente en el proyecto de producción. La migración 0008 agrega `stations.website_verified_at`: una verificación HTTPS correcta dura 30 días; después el sitio oficial vuelve a ocultarse hasta una nueva comprobación. Antes de desplegar esta versión en producción, aplicá la migración 0008 mediante SQL Editor, después de revisar el historial y hacer un backup.
+La migración 0007 agrega `stations.website_is_secure`, aplicada manualmente en el proyecto de producción. La migración 0008 agrega `stations.website_verified_at`: una verificación HTTPS correcta dura 30 días. La migración 0009 crea `website_verification_events`, una tabla privada para registrar certificados inválidos, redirecciones inseguras, fallos temporales y recuperaciones. Antes de desplegar esta versión en producción, aplicá la migración 0009 mediante SQL Editor, después de revisar el historial y hacer un backup.
 
 **Antes de aplicar migraciones en una base existente:**
 
@@ -53,6 +56,18 @@ La migración 0007 agrega `stations.website_is_secure`, aplicada manualmente en 
 5. Nunca ejecutes `supabase/seed.sql` en producción: contiene datos DEMO.
 
 En una base local nueva, seguí el flujo de Supabase CLI documentado por el proyecto y comprobá que todas las migraciones se apliquen correctamente. Verificá también que `site_settings.allow_demo_data` esté en `false` en producción.
+
+## Monitoreo automático de sitios oficiales
+
+Después de aplicar la migración 0009 y desplegar el código:
+
+1. En Vercel Production, configurá `SUPABASE_SERVICE_ROLE_KEY` con la clave service-role del proyecto Supabase y `WEBSITE_MONITOR_SECRET` con un secreto aleatorio fuerte. Ambas son variables privadas de servidor.
+2. En GitHub → Settings → Secrets and variables → Actions, creá el secreto `WEBSITE_MONITOR_SECRET` con exactamente el mismo valor. No cargues la service-role key en GitHub.
+3. El workflow `.github/workflows/website-monitor.yml` revisa diariamente las radios publicadas, en lotes pequeños, y también puede ejecutarse manualmente desde Actions.
+4. Los certificados inválidos y las redirecciones a HTTP deshabilitan el enlace oficial y generan un evento. Los fallos temporales se registran, pero no invalidan una verificación vigente.
+5. Revisá el resultado en GitHub → Actions → Official website monitoring y los eventos en `public.website_verification_events` desde Supabase.
+
+El endpoint requiere el secreto y usa la clave service-role exclusivamente en el servidor para leer y actualizar las radios publicadas. No habilites acceso público a la tabla de eventos.
 
 ## Primer administrador
 

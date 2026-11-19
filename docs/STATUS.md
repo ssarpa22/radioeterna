@@ -16,8 +16,8 @@ Este documento distingue lo que está implementado, lo que se ha comprobado y lo
 | Protección básica del panel | `/admin` redirige al login sin sesión |
 | Fichas de radios | Se corrigió el error 404 causado por la consulta de la nueva columna; el usuario confirmó que las fichas volvieron a funcionar |
 | Migración 0007 | `stations.website_is_secure` aplicada manualmente en producción |
-| Migración 0008 | Añade `stations.website_verified_at`; pendiente de aplicar en producción tras merge |
-| Verificación de webs oficiales | Probada manualmente en producción: el panel confirmó una URL HTTPS válida |
+| Migración 0008 | Añade `stations.website_verified_at`; aplicada manualmente en producción |
+| Verificación de webs oficiales | Probada manualmente en producción; verificación automática diaria preparada en PR |
 | Supabase / RLS en producción | No auditado de punta a punta |
 | Reproductor y streams reales | No validados sistemáticamente |
 | Carga y rendimiento | No medidos con k6/Lighthouse |
@@ -32,23 +32,24 @@ Los smoke tests de Playwright son de solo lectura: no inician sesión, no envía
 - Panel de administración y auditoría mediante triggers.
 - Importador de Radio Browser para superadministradores; importa como borrador y no publica automáticamente.
 - Verificador de streams con defensas SSRF.
-- Verificador de sitios oficiales: exige HTTPS válido, controla redirecciones y protege las conexiones contra SSRF. El enlace oficial permanece oculto hasta una verificación explícita.
+- Verificador de sitios oficiales: exige HTTPS válido, controla redirecciones y protege las conexiones contra SSRF. La comprobación manual está disponible; el monitoreo automático diario se incorpora con el workflow de GitHub Actions y un endpoint privado.
 - API pública de solo lectura y SEO técnico.
 
 ## Pendientes prioritarios
 
 1. **Pruebas funcionales de administración y RLS:** ejecutar pruebas aisladas con Supabase local para anon, authenticated y staff; cubrir solicitudes, aprobación, rechazo, CRUD y permisos. No automatizar escrituras contra producción.
 2. **Prueba manual del sitio oficial:** desde el panel, verificar una URL HTTPS válida; confirmar que el sitio aparece en la ficha pública. Probar también una URL HTTP o inválida y confirmar que permanece oculta. Si se modifica la URL, verificar que el estado seguro se invalida.
-3. **Vigencia de la verificación:** implementada con `website_verified_at` y vencimiento a los 30 días. Falta aplicar la migración 0008 en producción y comprobar el comportamiento después del despliegue.
-4. **Content-Security-Policy:** diseñar e introducir CSP en modo report-only primero. Debe contemplar Supabase, Turnstile y orígenes externos de streams.
-5. **Rendimiento:** incorporar Lighthouse y pruebas de carga moderadas en staging, nunca lanzar estrés contra producción.
-6. **Dependencias:** revisar periódicamente `npm outdated` y `npm audit`; actualizar en ramas separadas, regenerar el lockfile con npm y ejecutar typecheck, lint, tests y build. Mantener Next.js 15 salvo decisión explícita de migrar de versión mayor.
+3. **Vigencia de la verificación:** implementada con `website_verified_at`, migración 0008 aplicada en producción y vencimiento a los 30 días. Falta completar la comprobación funcional de vencimiento.
+4. **Monitoreo automático de sitios oficiales:** aplicar la migración 0009, configurar `SUPABASE_SERVICE_ROLE_KEY` y `WEBSITE_MONITOR_SECRET` en Vercel y el secreto homónimo en GitHub Actions; después ejecutar el workflow manualmente y comprobar eventos.
+5. **Content-Security-Policy:** diseñar e introducir CSP en modo report-only primero. Debe contemplar Supabase, Turnstile y orígenes externos de streams.
+6. **Rendimiento:** incorporar Lighthouse y pruebas de carga moderadas en staging, nunca lanzar estrés contra producción.
+7. **Dependencias:** revisar periódicamente `npm outdated` y `npm audit`; actualizar en ramas separadas, regenerar el lockfile con npm y ejecutar typecheck, lint, tests y build. Mantener Next.js 15 salvo decisión explícita de migrar de versión mayor.
 
 ## Configuración externa y operación
 
-La aplicación necesita variables de entorno válidas de Supabase y un administrador inicial. En producción, Turnstile requiere `NEXT_PUBLIC_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY`; sin ambas, los envíos públicos se rechazan. Upstash es recomendable para rate limiting distribuido, pero no se debe asumir que está configurado.
+La aplicación necesita variables de entorno válidas de Supabase y un administrador inicial. El monitor automático requiere además una clave service-role exclusivamente del lado del servidor y un secreto compartido; no deben exponerse al navegador. En producción, Turnstile requiere `NEXT_PUBLIC_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY`; sin ambas, los envíos públicos se rechazan. Upstash es recomendable para rate limiting distribuido, pero no se debe asumir que está configurado.
 
-No publicar claves service-role en el cliente ni en el repositorio. La aplicación no necesita `SUPABASE_SERVICE_ROLE_KEY`.
+No publicar claves service-role en el cliente ni en el repositorio. La clave `SUPABASE_SERVICE_ROLE_KEY` solo la necesita el endpoint privado del monitor y nunca debe exponerse al cliente ni guardarse en el repositorio.
 
 ## Limitaciones conocidas
 
@@ -56,7 +57,7 @@ No publicar claves service-role en el cliente ni en el repositorio. La aplicaci�
 - Sin correos transaccionales ni notificaciones automáticas.
 - Favoritas guardadas localmente, no sincronizadas entre dispositivos.
 - Sin metadatos avanzados de reproducción.
-- No hay reverificación automática de streams ni de sitios oficiales; los sitios oficiales dejan de mostrarse 30 días después de su última verificación correcta.
+- La reverificación automática de sitios oficiales queda disponible al configurar los secretos y aplicar la migración 0009. Los streams de audio no se monitorean automáticamente.
 - La verificación HTTPS confirma TLS y redirecciones en el momento de la prueba; no certifica que el contenido externo sea confiable ni que no cambie después.
 - Streams HTTP pueden ser bloqueados desde páginas HTTPS y HLS depende del CORS de cada emisora.
 - Las páginas legales son borradores y requieren revisión profesional.

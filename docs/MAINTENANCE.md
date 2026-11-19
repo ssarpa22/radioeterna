@@ -1,6 +1,6 @@
 # Mantenimiento
 
-**Estado real:** ningún backup, monitoreo ni alerta está configurado. Esto es lo que debes activar.
+**Estado real:** los backups siguen siendo una tarea manual según el plan de Supabase. El monitoreo diario de sitios oficiales se implementa mediante GitHub Actions, Vercel y Supabase; requiere configurar los secretos indicados en `DEPLOYMENT.md`.
 
 ## Backups
 - **Supabase Free:** sin backups automáticos. Haz uno manual con regularidad: `supabase db dump --linked -f backup-AAAA-MM-DD.sql` (y `--data-only` si quieres solo datos). Guárdalo fuera de tu computadora principal.
