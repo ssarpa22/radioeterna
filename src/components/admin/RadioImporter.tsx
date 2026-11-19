@@ -8,7 +8,7 @@ type CountryOption = { id: string; code: string; name: string };
 
 export function RadioImporter({ countries }: { countries: CountryOption[] }) {
   const [country, setCountry] = useState(countries.find((item) => item.code === 'AR')?.code ?? countries[0]?.code ?? '');
-  const [term, setTerm] = useState('radio cristiana');
+  const [term, setTerm] = useState('');
   const [results, setResults] = useState<RadioCandidate[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState('');
@@ -57,14 +57,14 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
             </select>
           </label>
           <label className="grid gap-1.5 text-sm font-semibold" htmlFor="import-term">
-            Buscar por nombre o frase
-            <input id="import-term" value={term} onChange={(event) => setTerm(event.target.value)} maxLength={80} className="field" placeholder="Ej. radio cristiana, gospel, adoración" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search(); } }} />
+            Búsqueda opcional por nombre o frase
+            <input id="import-term" value={term} onChange={(event) => setTerm(event.target.value)} maxLength={80} className="field" placeholder="Dejalo vacío para explorar todo el país" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search(); } }} />
           </label>
-          <button type="button" onClick={search} disabled={pending || !country || term.trim().length < 2} className="btn btn-dark">
+          <button type="button" onClick={search} disabled={pending || !country} className="btn btn-dark">
             {pending ? 'Buscando…' : 'Buscar emisoras'}
           </button>
         </div>
-        <p className="mt-3 text-sm text-ink/65">Buscamos en Radio Browser. Solo mostramos candidatas con señal cristiana, stream HTTPS y estado técnico activo. La importación vuelve a comprobar el audio antes de guardar.</p>
+        <p className="mt-3 text-sm text-ink/65">Si dejás la búsqueda vacía, exploramos hasta 500 emisoras del país y filtramos candidatas con señales cristianas o family friendly en el nombre o las etiquetas. También podés escribir una frase para acotar. Solo mostramos streams HTTPS activos; la importación vuelve a comprobar el audio antes de guardar.</p>
       </section>
 
       {message && <p role="status" className="rounded-xl border border-line bg-white px-4 py-3 text-sm">{message}</p>}
@@ -99,7 +99,7 @@ export function RadioImporter({ countries }: { countries: CountryOption[] }) {
       )}
 
       {results.length === 0 && !pending && message.startsWith('Se encontraron') && (
-        <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink/65">No hay resultados que cumplan los filtros. Probá con otra frase o país.</p>
+        <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink/65">No hay resultados que cumplan los filtros. Probá explorar el país sin texto o elegí otro país.</p>
       )}
 
       {imported.length > 0 && (
