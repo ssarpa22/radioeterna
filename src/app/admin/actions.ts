@@ -63,7 +63,7 @@ export async function saveStation(_p: FormState, fd: FormData): Promise<FormStat
 }
 
 export async function publishVerifiedStations(rawIds: string[]): Promise<CommandResult & { published?: number }> {
-  const staff = await requireStaff('editor');
+  await requireStaff('editor');
   if (!Array.isArray(rawIds) || rawIds.length === 0 || rawIds.length > 50) {
     return { ok: false, message: 'Seleccioná entre 1 y 50 radios.' };
   }
