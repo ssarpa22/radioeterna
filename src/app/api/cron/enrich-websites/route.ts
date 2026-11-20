@@ -32,7 +32,7 @@ function clean(value: string | undefined, max: number) {
 }
 function attr(html: string, key: string) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = html.match(new RegExp('\\b' + escaped + '\\s*=\\s*["\\']([^"\\']*)["\\']', 'i'));
+  const m = html.match(new RegExp(`\\b${escaped}\\s*=\\s*["']([^"']*)["']`, 'i'));
   return m?.[1];
 }
 function extract(html: string, base: URL) {
