@@ -62,12 +62,11 @@ export async function applyWebsiteSuggestion(id: string) {
   revalidatePath('/');
 }
 
-export async function applyAllWebsiteSuggestions() {
+export async function applyAllWebsiteSuggestions(_formData: FormData) {
   await requireStaff();
   const admin = createAdminClient();
   const user = await createClient();
   let cursor = '';
-  let applied = 0;
 
   // Cursor pagination stays stable as suggestion statuses change.
   while (true) {
@@ -82,7 +81,7 @@ export async function applyAllWebsiteSuggestions() {
     if (error || !data?.length) break;
 
     for (const row of data) {
-      if (await applySuggestion(admin, user, row.id)) applied++;
+      await applySuggestion(admin, user, row.id);
     }
     cursor = data[data.length - 1]!.id;
     if (data.length < 100) break;
@@ -91,7 +90,6 @@ export async function applyAllWebsiteSuggestions() {
   revalidatePath('/admin/investigador');
   revalidatePath('/admin/radios');
   revalidatePath('/');
-  return { applied };
 }
 
 export async function dismissWebsiteSuggestion(id: string) {
