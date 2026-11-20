@@ -65,7 +65,6 @@ function extract(html: string, base: URL) {
       if (key && !social[key]) social[key] = u.toString().slice(0, 2048);
     } catch {}
   }
-  const lang = html.match(/<html\b[^>]*\blang=["']([a-z]{2}(?:-[A-Z]{2})?)["']/i)?.[1]?.slice(0,8) ?? null;
   const emails = [...new Set((html.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [])
     .map(x => x.toLowerCase()).filter(x => !/\.(png|jpg|jpeg|webp|svg)$/i.test(x)))].slice(0,3);
   const streamLinks = [...html.matchAll(/(?:href|src)=["']([^"']+\.(?:mp3|aac|ogg|m3u8?)(?:\?[^"']*)?)["']/gi)]
@@ -76,7 +75,6 @@ function extract(html: string, base: URL) {
   if (description) { candidates.description = description; confidence.description = 'high'; }
   if (logo_url) { candidates.logo_url = logo_url; confidence.logo_url = 'medium'; }
   if (Object.keys(social).length) { candidates.social_links = social; confidence.social_links = 'high'; }
-  if (lang) { candidates.language = lang; confidence.language = 'medium'; }
   if (emails.length) { candidates.contact_emails = emails; confidence.contact_emails = 'medium'; }
   if (streamLinks.length) { candidates.stream_candidates = [...new Set(streamLinks)]; confidence.stream_candidates = 'low'; }
   return { candidates, confidence };
