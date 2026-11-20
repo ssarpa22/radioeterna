@@ -5,6 +5,7 @@ import { listCategories, searchStations } from '@/lib/data/stations';
 import { StationList } from '@/components/StationRow';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
+import { buildDirectoryItemList, serializeJsonLd } from '@/lib/seo/directory';
 
 const PAGE_SIZE = 20;
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pagina?: string }> };
@@ -24,8 +25,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const cat = (await listCategories()).find((c) => c.slug === slug);
   if (!cat) notFound();
   const result = await searchStations({ categoria: slug, pagina: page((await searchParams).pagina), limite: PAGE_SIZE });
+  const itemList = buildDirectoryItemList(result.items, `/categorias/${slug}`, result.total);
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />
       <PageHeader title={cat.name} crumb={{ href: '/categorias', label: 'Todas las categorías' }} intro={cat.description ?? undefined} />
       <div className="wrap py-8">
         {result.items.length > 0 ? <><StationList items={result.items} /><Pagination basePath={`/categorias/${slug}`} params={{}} page={result.page} total={result.total} pageSize={PAGE_SIZE} /></> :
