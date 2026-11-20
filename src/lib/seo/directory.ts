@@ -1,3 +1,5 @@
+import { absoluteUrl } from '@/lib/site';
+
 type DirectoryItem = { name: string; slug: string };
 
 export function buildDirectoryItemList(items: DirectoryItem[], basePath: string, total: number) {
@@ -10,7 +12,7 @@ export function buildDirectoryItemList(items: DirectoryItem[], basePath: string,
       '@type': 'ListItem',
       position: index + 1,
       name: item.name,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? ''}${basePath}/${item.slug}`,
+      url: absoluteUrl(`${basePath}/${item.slug}`),
     })),
   };
 }
