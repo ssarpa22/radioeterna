@@ -87,7 +87,8 @@ export default async function StationPage({ params }: Props) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Radios', item: absoluteUrl('/radios') },
       ...(country ? [{ '@type': 'ListItem', position: 2, name: country.name, item: absoluteUrl(`/paises/${country.slug}`) }] : []),
-      { '@type': 'ListItem', position: country ? 3 : 2, name: s.name, item: absoluteUrl(`/radios/${s.slug}`) },
+      ...(category ? [{ '@type': 'ListItem', position: country ? 3 : 2, name: category.name, item: absoluteUrl(`/categorias/${category.slug}`) }] : []),
+      { '@type': 'ListItem', position: 1 + Number(Boolean(country)) + Number(Boolean(category)) + 1, name: s.name, item: absoluteUrl(`/radios/${s.slug}`) },
     ],
   };
 
@@ -129,11 +130,10 @@ export default async function StationPage({ params }: Props) {
           </section>
         )}
 
-        {(socialLinks.length > 0 || officialWebsite) && (
+        {socialLinks.length > 0 && (
           <section aria-labelledby="enlaces">
-            <h2 id="enlaces" className="mb-3 text-2xl">Sitio web y redes sociales</h2>
+            <h2 id="enlaces" className="mb-3 text-2xl">Redes sociales</h2>
             <div className="flex flex-wrap gap-3">
-              {officialWebsite && <a href={officialWebsite} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Sitio oficial<ExternalLink className="h-4 w-4" aria-hidden /></a>}
               {socialLinks.map((link) => <a key={link.key} href={link.url} target="_blank" rel="noopener noreferrer nofollow" className="btn btn-ghost">{link.label}<ExternalLink className="h-4 w-4" aria-hidden /></a>)}
             </div>
           </section>
