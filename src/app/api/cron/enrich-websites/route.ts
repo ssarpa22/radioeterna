@@ -114,7 +114,7 @@ async function fetchPage(input: URL): Promise<{ html: string; finalUrl: URL }> {
       url=new URL(response.location,url); continue;
     }
     if (response.status<200 || response.status>=300) throw new Error(`El sitio respondió HTTP ${response.status}.`);
-    return {html:response.body,finalUrl:url};
+    return {html:response.body ?? '',finalUrl:url};
   }
   throw new Error('No se pudo seguir la redirección.');
 }
