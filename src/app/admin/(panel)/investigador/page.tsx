@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { requireStaff } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PageHeader } from '@/components/ui';
-import { applyWebsiteSuggestion, dismissWebsiteSuggestion } from './actions';
+import { applyAllWebsiteSuggestions, applyWebsiteSuggestion, dismissWebsiteSuggestion } from './actions';
 
 export const metadata: Metadata = { title: 'Investigador de emisoras' };
 
@@ -20,12 +20,12 @@ export default async function WebsiteResearch() {
       <section className="rounded-2xl border border-line bg-white p-5">
         <h2 className="text-xl font-semibold">Cómo funciona</h2>
         <p className="mt-2 text-sm text-ink/70">El workflow diario analiza dos sitios por ejecución de lote, evita duplicar sugerencias pendientes y registra los resultados. También podés iniciarlo manualmente desde GitHub Actions.</p>
-        <p className="mt-2 text-sm text-ink/70">Al aprobar, solo completa campos vacíos. Nunca reemplaza nombre, descripción, logo, idioma o redes que ya estén cargados. Streams, emails y otros hallazgos quedan como referencia para revisión.</p>
+        <p className="mt-2 text-sm text-ink/70">La aprobación completa únicamente descripción, logo y redes sociales que estén vacíos. Nunca reemplaza datos existentes ni modifica el idioma, el nombre o el stream. Emails y posibles streams quedan como referencia para revisión.</p>
         <a className="mt-3 inline-block text-sm font-semibold text-sky hover:underline" href="https://github.com/ssarpa22/radioeterna/actions/workflows/website-enrichment.yml" target="_blank" rel="noreferrer">Ejecutar workflow en GitHub ↗</a>
       </section>
       {error && <p role="alert" className="rounded-xl bg-[#F8E5E3] p-4 text-danger">No se pudieron cargar las sugerencias.</p>}
       <section>
-        <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-semibold">Pendientes de revisión</h2><p className="text-sm text-ink/60">Hasta 50 sugerencias recientes</p></div><span className="text-sm font-semibold">{pending?.length??0} pendiente(s)</span></div>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-semibold">Pendientes de revisión</h2><p className="text-sm text-ink/60">Hasta 50 sugerencias recientes</p></div><div className="flex flex-wrap items-center gap-3"><span className="text-sm font-semibold">{pending?.length??0} pendiente(s) visibles</span>{Boolean(pending?.length) && <form action={applyAllWebsiteSuggestions}><button className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy/90">Aceptar todas las pendientes</button></form>}</div></div>
         {!pending?.length ? <div className="rounded-2xl border border-line bg-white p-6 text-sm text-ink/70">No hay sugerencias pendientes. Ejecutá el workflow para investigar nuevos sitios.</div> :
         <ul className="grid gap-4">{pending.map(item=>{
           const suggestions=item.suggestions as Record<string,unknown>, confidence=item.confidence as Record<string,string>;
