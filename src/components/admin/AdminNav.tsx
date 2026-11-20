@@ -9,6 +9,7 @@ const LINKS: [string, string][] = [
   ['/admin/diagnostico', 'Resolver problemas'],
   ['/admin/calidad', 'Calidad del catálogo'],
   ['/admin/monitoreo', 'Monitoreo web'],
+  ['/admin/investigador', 'Investigador'],
   ['/admin/importar', 'Importar emisoras'],
   ['/admin/solicitudes', 'Solicitudes'],
   ['/admin/categorias', 'Categorías'],
