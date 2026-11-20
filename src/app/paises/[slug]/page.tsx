@@ -4,6 +4,7 @@ import { listCountries, searchStations } from '@/lib/data/stations';
 import { StationList } from '@/components/StationRow';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
+import { buildDirectoryItemList, serializeJsonLd } from '@/lib/seo/directory';
 import Link from 'next/link';
 
 const PAGE_SIZE = 20;
@@ -24,8 +25,10 @@ export default async function CountryPage({ params, searchParams }: Props) {
   const country = (await listCountries()).find((c) => c.slug === slug);
   if (!country) notFound();
   const result = await searchStations({ pais: slug, pagina: page((await searchParams).pagina), limite: PAGE_SIZE });
+  const itemList = buildDirectoryItemList(result.items, `/paises/${slug}`, result.total);
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />
       <PageHeader title={`Radios cristianas de ${country.name}`} crumb={{ href: '/paises', label: 'Todos los países' }} intro={result.total > 0 ? `${result.total} ${result.total === 1 ? 'radio' : 'radios'} para escuchar en vivo.` : undefined} />
       <div className="wrap py-8">
         {result.items.length > 0 ? <><StationList items={result.items} /><Pagination basePath={`/paises/${slug}`} params={{}} page={result.page} total={result.total} pageSize={PAGE_SIZE} /></> :

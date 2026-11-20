@@ -5,6 +5,7 @@ import { SearchForm } from '@/components/SearchForm';
 import { StationList } from '@/components/StationRow';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
+import { buildDirectoryItemList, serializeJsonLd } from '@/lib/seo/directory';
 import Link from 'next/link';
 
 const PAGE_SIZE = 20;
@@ -28,8 +29,10 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function RadiosPage({ searchParams }: Props) {
   const f = await parse(searchParams);
   const [countries, categories, result] = await Promise.all([listCountries(), listCategories(), searchStations({ ...f, limite: PAGE_SIZE })]);
+  const itemList = buildDirectoryItemList(result.items, '/radios', result.total);
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />
       <PageHeader title="Radios cristianas en vivo" intro="Busca por nombre y filtra por país o categoría." />
       <div className="wrap py-8">
         <SearchForm countries={countries} categories={categories} values={f} compact />
