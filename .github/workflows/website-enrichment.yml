@@ -1,0 +1,42 @@
+name: Official website enrichment
+
+on:
+  schedule:
+    - cron: '50 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: official-website-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Discover data from published station websites
+        env:
+          WEBSITE_MONITOR_SECRET: ${{ secrets.WEBSITE_MONITOR_SECRET }}
+          SITE_URL: https://radioeterna.vercel.app
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${WEBSITE_MONITOR_SECRET}" ]]; then
+            echo "::error::Missing GitHub Actions secret WEBSITE_MONITOR_SECRET"
+            exit 1
+          fi
+          cursor=""
+          while true; do
+            endpoint="${SITE_URL}/api/cron/enrich-websites"
+            if [[ -n "${cursor}" ]]; then endpoint="${endpoint}?cursor=${cursor}"; fi
+            response="$(curl --request POST --fail-with-body --silent --show-error --max-time 25 \
+              -H "Authorization: Bearer ${WEBSITE_MONITOR_SECRET}" "${endpoint}")"
+            echo "${response}" | jq -c '{checked,scanned,skipped,issues,done}'
+            done="$(echo "${response}" | jq -r '.done')"
+            if [[ "${done}" == "true" ]]; then break; fi
+            cursor="$(echo "${response}" | jq -r '.nextCursor // empty')"
+            if [[ -z "${cursor}" ]]; then echo "::error::Enrichment returned no cursor before finishing."; exit 1; fi
+          done
