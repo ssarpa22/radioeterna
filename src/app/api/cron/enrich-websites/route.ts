@@ -92,7 +92,7 @@ async function fetchPage(input: URL): Promise<{ html: string; finalUrl: URL }> {
     const addresses = net.isIP(host) ? [{address:host,family:net.isIP(host)}] : await dns.lookup(host,{all:true,verbatim:true});
     if (!addresses.length || !addresses.every(a=>isPublicIp(a.address))) throw new Error('El dominio apunta a una IP privada o reservada.');
     const pin = addresses[0]!;
-    const response = await new Promise<{status:number;location?:string;body:string}>((resolve,reject)=>{
+    const response = await new Promise<{status:number;location?:string;body?:string}>((resolve,reject)=>{
       let settled=false; const finish=(fn:()=>void)=>{if(!settled){settled=true;clearTimeout(timer);fn();}};
       const req=https.request({hostname:url.hostname,port:443,path:url.pathname+url.search,method:'GET',
         headers:{'User-Agent':'RadioEternaWebsiteResearch/1.0 (+https://radioeterna.vercel.app)','Accept':'text/html,application/xhtml+xml;q=0.9'},
