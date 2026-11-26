@@ -6,6 +6,7 @@ import { PlayerProvider } from '@/components/player/PlayerProvider';
 import { PlayerBar } from '@/components/player/PlayerBar';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { GoogleTagManager } from '@next/third-parties/google';
 
 const display = Fraunces({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
 const sans = Hanken_Grotesk({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${display.variable} ${sans.variable}`}>
       <body>
+		<GoogleTagManager gtmId="GTM-P77SFJF6" />
         <PlayerProvider>
           <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">Saltar al contenido</a>
           <Header />
