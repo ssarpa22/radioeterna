@@ -1,6 +1,6 @@
 export const SITE = {
   name: 'Radio Eterna',
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, ''),
+  url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://radioeterna.vercel.app').replace(/\/$/, ''),
   description: 'Directorio de radios cristianas y evangélicas en vivo, de todo el mundo hispano. Escucha desde un solo lugar.',
   credit: 'Una plataforma desarrollada por Lazo Sur',
 };
