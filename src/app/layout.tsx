@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description: SITE.description,
   openGraph: { type: 'website', siteName: SITE.name, locale: 'es_LA', title: SITE.name, description: SITE.description },
   twitter: { card: 'summary_large_image' },
+  verification: {
+    google: 'rgZ3sk5lqiwtWpE9r3l1YvKnRYVzK60y3zVWw9g7Kgs',
+  },
 };
 export const viewport: Viewport = { themeColor: '#0A1730', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
