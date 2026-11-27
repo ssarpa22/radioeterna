@@ -16,7 +16,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const country = (await listCountries()).find((c) => c.slug === slug);
   if (!country) return { title: 'País no encontrado', robots: { index: false } };
   const { total } = await searchStations({ pais: slug, limite: 1 });
-  return { title: `Radios cristianas de ${country.name}`, description: `Escucha en vivo radios cristianas y evangélicas de ${country.name}.`,
+  return { title: `Radios cristianas de ${country.name}`, description: `Escucha en vivo radios cristianas y evangélicas de ${country.name}. Encuentra emisoras online y descubre su programación.`,
     alternates: { canonical: `/paises/${slug}` }, robots: total === 0 || pg > 1 ? { index: false, follow: true } : undefined };
 }
 
@@ -25,11 +25,11 @@ export default async function CountryPage({ params, searchParams }: Props) {
   const country = (await listCountries()).find((c) => c.slug === slug);
   if (!country) notFound();
   const result = await searchStations({ pais: slug, pagina: page((await searchParams).pagina), limite: PAGE_SIZE });
-  const itemList = buildDirectoryItemList(result.items, `/paises/${slug}`, result.total);
+  const itemList = buildDirectoryItemList(result.items, result.total);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />
-      <PageHeader title={`Radios cristianas de ${country.name}`} crumb={{ href: '/paises', label: 'Todos los países' }} intro={result.total > 0 ? `${result.total} ${result.total === 1 ? 'radio' : 'radios'} para escuchar en vivo.` : undefined} />
+      <PageHeader title={`Radios cristianas de ${country.name}`} crumb={{ href: '/paises', label: 'Todos los países' }} intro={result.total > 0 ? `Explora ${result.total} ${result.total === 1 ? 'emisora cristiana' : 'emisoras cristianas'} de ${country.name} y escucha sus transmisiones en vivo.` : undefined} />
       <div className="wrap py-8">
         {result.items.length > 0 ? <><StationList items={result.items} /><Pagination basePath={`/paises/${slug}`} params={{}} page={result.page} total={result.total} pageSize={PAGE_SIZE} /></> :
           <EmptyState title={`Aún no hay radios de ${country.name}`} action={<Link href="/radios" className="btn btn-ghost">Ver todas las radios</Link>}>Estamos sumando radios de cada país.</EmptyState>}
