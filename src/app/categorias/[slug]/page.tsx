@@ -5,7 +5,7 @@ import { listCategories, searchStations } from '@/lib/data/stations';
 import { StationList } from '@/components/StationRow';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
-import { buildDirectoryItemList, getCategoryDescription, serializeJsonLd } from '@/lib/seo/directory';
+import { buildDirectoryItemList, getCategoryDescription, getDirectoryPageMetadata, serializeJsonLd } from '@/lib/seo/directory';
 
 const PAGE_SIZE = 20;
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pagina?: string }> };
@@ -16,8 +16,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const cat = (await listCategories()).find((c) => c.slug === slug);
   if (!cat) return { title: 'Categoría no encontrada', robots: { index: false } };
   const { total } = await searchStations({ categoria: slug, limite: 1 });
+  const pageMetadata = getDirectoryPageMetadata(`/categorias/${slug}`, pg, total, PAGE_SIZE);
   return { title: `${cat.name}: radios cristianas en vivo`, description: getCategoryDescription(cat.slug, cat.name, cat.description),
-    alternates: { canonical: `/categorias/${slug}` }, robots: total === 0 || pg > 1 ? { index: false, follow: true } : undefined };
+    alternates: { canonical: pageMetadata.canonical }, robots: pageMetadata.robots };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
