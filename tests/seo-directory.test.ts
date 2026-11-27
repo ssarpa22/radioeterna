@@ -41,7 +41,8 @@ describe('SEO directory structured data', () => {
 
   it('keeps empty and out-of-range directory pages out of the index', () => {
     expect(getDirectoryPageMetadata('/categorias/gospel', 1, 0, 20).robots).toEqual({ index: false, follow: true });
-    expect(getDirectoryPageMetadata('/categorias/gospel', 3, 45, 20).robots).toEqual({ index: false, follow: true });
+    expect(getDirectoryPageMetadata('/categorias/gospel', 3, 45, 20).robots).toBeUndefined();
+    expect(getDirectoryPageMetadata('/categorias/gospel', 4, 45, 20).robots).toEqual({ index: false, follow: true });
   });
 
   it('escapes less-than characters before embedding JSON-LD in HTML', () => {
