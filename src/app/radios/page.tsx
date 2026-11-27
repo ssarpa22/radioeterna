@@ -29,7 +29,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function RadiosPage({ searchParams }: Props) {
   const f = await parse(searchParams);
   const [countries, categories, result] = await Promise.all([listCountries(), listCategories(), searchStations({ ...f, limite: PAGE_SIZE })]);
-  const itemList = buildDirectoryItemList(result.items, '/radios', result.total);
+  const itemList = buildDirectoryItemList(result.items, result.total);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />

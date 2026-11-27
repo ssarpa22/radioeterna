@@ -82,14 +82,17 @@ export default async function StationPage({ params }: Props) {
     address: country || s.city ? { '@type': 'PostalAddress', addressLocality: s.city ?? undefined, addressCountry: country?.name } : undefined,
     genre: category?.name, inLanguage: s.language,
   };
+  const breadcrumbItems = [
+    { name: 'Radios', path: '/radios' },
+    ...(country ? [{ name: country.name, path: `/paises/${country.slug}` }] : []),
+    ...(category ? [{ name: category.name, path: `/categorias/${category.slug}` }] : []),
+    { name: s.name, path: `/radios/${s.slug}` },
+  ];
   const breadcrumbs = {
     '@context': 'https://schema.org', '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Radios', item: absoluteUrl('/radios') },
-      ...(country ? [{ '@type': 'ListItem', position: 2, name: country.name, item: absoluteUrl(`/paises/${country.slug}`) }] : []),
-      ...(category ? [{ '@type': 'ListItem', position: country ? 3 : 2, name: category.name, item: absoluteUrl(`/categorias/${category.slug}`) }] : []),
-      { '@type': 'ListItem', position: 1 + Number(Boolean(country)) + Number(Boolean(category)) + 1, name: s.name, item: absoluteUrl(`/radios/${s.slug}`) },
-    ],
+    itemListElement: breadcrumbItems.map((item, index) => ({
+      '@type': 'ListItem', position: index + 1, name: item.name, item: absoluteUrl(item.path),
+    })),
   };
 
   return (

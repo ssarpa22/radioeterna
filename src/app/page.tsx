@@ -1,8 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getCounts, listCategories, listCountries, searchStations } from '@/lib/data/stations';
 import { SearchForm } from '@/components/SearchForm';
 import { StationList } from '@/components/StationRow';
 import { EmptyState, SectionHeading } from '@/components/ui';
+
+export const metadata: Metadata = {
+  title: 'Radios cristianas en vivo de todo el mundo',
+  description: 'Encuentra y escucha radios cristianas y evangélicas online. Explora emisoras por país, categoría o nombre en Radio Eterna.',
+  alternates: { canonical: '/' },
+};
 
 export default async function HomePage() {
   const [countries, categories, counts, featured, recent] = await Promise.all([
@@ -14,7 +21,7 @@ export default async function HomePage() {
     <>
       <section className="bg-ink text-paper">
         <div className="wrap pb-10 pt-12 sm:pt-20">
-          <h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl">Radio cristiana en vivo, de todo el mundo hispano.</h1>
+          <h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl">Radios cristianas en vivo de todo el mundo hispano.</h1>
           <p className="mt-5 max-w-xl text-lg text-paper/80">Encuentra una radio evangélica por nombre, país o categoría y escúchala sin salir de la página.</p>
           <div className="mt-8 rounded-2xl bg-paper p-4 text-ink sm:p-5"><SearchForm countries={countries} categories={categories} /></div>
         </div>

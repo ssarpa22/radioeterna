@@ -5,7 +5,7 @@ import { listCategories, searchStations } from '@/lib/data/stations';
 import { StationList } from '@/components/StationRow';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
-import { buildDirectoryItemList, serializeJsonLd } from '@/lib/seo/directory';
+import { buildDirectoryItemList, getCategoryDescription, serializeJsonLd } from '@/lib/seo/directory';
 
 const PAGE_SIZE = 20;
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pagina?: string }> };
@@ -16,7 +16,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const cat = (await listCategories()).find((c) => c.slug === slug);
   if (!cat) return { title: 'Categoría no encontrada', robots: { index: false } };
   const { total } = await searchStations({ categoria: slug, limite: 1 });
-  return { title: `${cat.name}: radios cristianas en vivo`, description: cat.description ?? `Escucha radios cristianas de la categoría ${cat.name.toLowerCase()}.`,
+  return { title: `${cat.name}: radios cristianas en vivo`, description: getCategoryDescription(cat.slug, cat.name),
     alternates: { canonical: `/categorias/${slug}` }, robots: total === 0 || pg > 1 ? { index: false, follow: true } : undefined };
 }
 
@@ -25,11 +25,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const cat = (await listCategories()).find((c) => c.slug === slug);
   if (!cat) notFound();
   const result = await searchStations({ categoria: slug, pagina: page((await searchParams).pagina), limite: PAGE_SIZE });
-  const itemList = buildDirectoryItemList(result.items, `/categorias/${slug}`, result.total);
+  const itemList = buildDirectoryItemList(result.items, result.total);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />
-      <PageHeader title={cat.name} crumb={{ href: '/categorias', label: 'Todas las categorías' }} intro={cat.description ?? undefined} />
+      <PageHeader title={cat.name} crumb={{ href: '/categorias', label: 'Todas las categorías' }} intro={getCategoryDescription(cat.slug, cat.name)} />
       <div className="wrap py-8">
         {result.items.length > 0 ? <><StationList items={result.items} /><Pagination basePath={`/categorias/${slug}`} params={{}} page={result.page} total={result.total} pageSize={PAGE_SIZE} /></> :
           <EmptyState title="Aún no hay radios en esta categoría" action={<Link href="/radios" className="btn btn-ghost">Ver todas las radios</Link>}>Vuelve pronto o explora otras categorías.</EmptyState>}
