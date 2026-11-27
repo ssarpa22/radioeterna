@@ -80,7 +80,6 @@ export default async function StationPage({ params }: Props) {
     description: s.short_description ?? s.description ?? undefined, image: s.logo_url ?? undefined,
     sameAs: sameAs.length ? sameAs : undefined,
     address: country || s.city ? { '@type': 'PostalAddress', addressLocality: s.city ?? undefined, addressCountry: country?.name } : undefined,
-    genre: category?.name, inLanguage: s.language,
   };
   const breadcrumbItems = [
     { name: 'Radios', path: '/radios' },

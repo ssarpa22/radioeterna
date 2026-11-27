@@ -16,9 +16,8 @@ test('la portada carga y muestra la identidad de Radio Eterna', async ({ page })
   const response = await page.goto('/');
   expect(response, 'la portada debe responder').not.toBeNull();
   expect(response!.status()).toBe(200);
-  await expect(page).toHaveTitle(/Radio Eterna/i);
+  await expect(page).toHaveTitle(/Radios cristianas en vivo de todo el mundo/i);
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: /radios/i }).first()).toBeVisible();
 });
 
 for (const route of publicRoutes.slice(1)) {

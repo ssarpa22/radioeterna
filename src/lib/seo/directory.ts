@@ -37,6 +37,16 @@ export function buildDirectoryItemList(items: DirectoryItem[], total: number) {
   };
 }
 
+export function getDirectoryPageMetadata(path: string, page: number, total: number, pageSize: number) {
+  const lastPage = Math.ceil(total / pageSize);
+  const hasPageContent = total > 0 && page <= lastPage;
+
+  return {
+    canonical: page > 1 ? `${path}?pagina=${page}` : path,
+    robots: hasPageContent ? undefined : { index: false as const, follow: true as const },
+  };
+}
+
 export function serializeJsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }

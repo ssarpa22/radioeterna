@@ -4,7 +4,7 @@ import { listCountries, searchStations } from '@/lib/data/stations';
 import { StationList } from '@/components/StationRow';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState, PageHeader } from '@/components/ui';
-import { buildDirectoryItemList, serializeJsonLd } from '@/lib/seo/directory';
+import { buildDirectoryItemList, getDirectoryPageMetadata, serializeJsonLd } from '@/lib/seo/directory';
 import Link from 'next/link';
 
 const PAGE_SIZE = 20;
@@ -16,8 +16,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const country = (await listCountries()).find((c) => c.slug === slug);
   if (!country) return { title: 'País no encontrado', robots: { index: false } };
   const { total } = await searchStations({ pais: slug, limite: 1 });
+  const pageMetadata = getDirectoryPageMetadata(`/paises/${slug}`, pg, total, PAGE_SIZE);
   return { title: `Radios cristianas de ${country.name}`, description: `Escucha en vivo radios cristianas y evangélicas de ${country.name}. Encuentra emisoras online y descubre su programación.`,
-    alternates: { canonical: `/paises/${slug}` }, robots: total === 0 || pg > 1 ? { index: false, follow: true } : undefined };
+    alternates: { canonical: pageMetadata.canonical }, robots: pageMetadata.robots };
 }
 
 export default async function CountryPage({ params, searchParams }: Props) {
