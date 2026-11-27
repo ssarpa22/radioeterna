@@ -14,7 +14,10 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   'radiodifusion-cristiana-general': 'Encuentra emisoras con programación cristiana general y una variedad de contenidos relacionados con la fe.',
 };
 
-export function getCategoryDescription(slug: string, name: string): string {
+export function getCategoryDescription(slug: string, name: string, existingDescription?: string | null): string {
+  const editorialDescription = existingDescription?.trim();
+  if (editorialDescription) return editorialDescription;
+
   return CATEGORY_DESCRIPTIONS[slug] ??
     `Explora emisoras de la categoría ${name.toLowerCase()} y escucha su transmisión en vivo desde Radio Eterna.`;
 }

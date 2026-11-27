@@ -16,7 +16,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const cat = (await listCategories()).find((c) => c.slug === slug);
   if (!cat) return { title: 'Categoría no encontrada', robots: { index: false } };
   const { total } = await searchStations({ categoria: slug, limite: 1 });
-  return { title: `${cat.name}: radios cristianas en vivo`, description: getCategoryDescription(cat.slug, cat.name),
+  return { title: `${cat.name}: radios cristianas en vivo`, description: getCategoryDescription(cat.slug, cat.name, cat.description),
     alternates: { canonical: `/categorias/${slug}` }, robots: total === 0 || pg > 1 ? { index: false, follow: true } : undefined };
 }
 
@@ -29,7 +29,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemList) }} />
-      <PageHeader title={cat.name} crumb={{ href: '/categorias', label: 'Todas las categorías' }} intro={getCategoryDescription(cat.slug, cat.name)} />
+      <PageHeader title={cat.name} crumb={{ href: '/categorias', label: 'Todas las categorías' }} intro={getCategoryDescription(cat.slug, cat.name, cat.description)} />
       <div className="wrap py-8">
         {result.items.length > 0 ? <><StationList items={result.items} /><Pagination basePath={`/categorias/${slug}`} params={{}} page={result.page} total={result.total} pageSize={PAGE_SIZE} /></> :
           <EmptyState title="Aún no hay radios en esta categoría" action={<Link href="/radios" className="btn btn-ghost">Ver todas las radios</Link>}>Vuelve pronto o explora otras categorías.</EmptyState>}
