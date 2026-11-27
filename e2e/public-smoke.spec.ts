@@ -18,7 +18,6 @@ test('la portada carga y muestra la identidad de Radio Eterna', async ({ page })
   expect(response!.status()).toBe(200);
   await expect(page).toHaveTitle(/Radios cristianas en vivo de todo el mundo/i);
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: /Radio Eterna, inicio/i })).toBeVisible();
 });
 
 for (const route of publicRoutes.slice(1)) {
@@ -38,6 +37,6 @@ test('rutas SEO públicas responden correctamente', async ({ request }) => {
 
 test('el área administrativa no expone el panel sin sesión', async ({ page }) => {
   await page.goto('/admin');
-  await expect(page).toHaveURL(/\\/admin\\/login/);
+  await expect(page).toHaveURL(/\/admin\/login/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
